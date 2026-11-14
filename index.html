@@ -395,10 +395,19 @@
       }
 
       // Координаты предыдущего положения нужны для плавной анимации.
-      previousSnake = snake.map((_, index) => {
-        const oldIndex = Math.max(0, index - 1);
-        return oldSnake[oldIndex] || oldSnake[oldSnake.length - 1];
-      });
+      previousSnake = snake.map((part, index) => {
+  let previousIndex;
+
+  if (index === 0) {
+    previousIndex = 0;
+  } else if (index === snake.length - 1) {
+    previousIndex = oldSnake.length - 1;
+  } else {
+    previousIndex = index - 1;
+  }
+
+  return oldSnake[previousIndex] || part;
+});
     }
 
     function draw(progress = 1) {
