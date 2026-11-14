@@ -583,114 +583,109 @@ function draw(progress = 1) {
 }
 
 function update() {
-  prevSnake = snake.map(part => ({ ...part }));
-  direction = nextDirection;
+      prevSnake = snake.map(part => ({ ...part }));
+      direction = nextDirection;
 
-  const head = {
-  x: (snake.at(0).x + direction.x + cells) % cells,
-  y: (snake.at(0).y + direction.y + cells) % cells
-};
+      const head = {
+        x: (snake.at(0).x + direction.x + cells) % cells,
+        y: (snake.at(0).y + direction.y + cells) % cells
+      };
 
-  const ateFood = head.x === food.x && head.y === food.y;
-  const bodyToCheck = ateFood ? snake : snake.slice(0, -1);
-  const hitSelf = bodyToCheck.some(part => part.x === head.x && part.y === head.y);
+      const ateFood = head.x === food.x && head.y === food.y;
+      const bodyToCheck = ateFood ? snake : snake.slice(0, -1);
+      const hitSelf = bodyToCheck.some(part => part.x === head.x && part.y === head.y);
 
-  if (hitSelf) {
-    finishGame(`Игра окончена! Счёт: ${score}`);
-    return false;
-  }
+      if (hitSelf) {
+        finishGame(`Игра окончена! Счёт: ${score}`);
+        return false;
+      }
 
-  snake.unshift(head);
+      snake.unshift(head);
 
-  if (ateFood) {
-    prevSnake.push({ ...prevSnake[prevSnake.length - 1] });
-    score += 1;
-    scoreElement.textContent = score;
-    if (score > bestScore) {
-      bestScore = score;
-      bestScoreElement.textContent = bestScore;
-      try {
-        localStorage.setItem("snakeBestScore", String(bestScore));
-      } catch {}
+      if (ateFood) {
+        prevSnake.push({ ...prevSnake.at(-1) });
+        score += 1;
+        scoreElement.textContent = score;
+        if (score > bestScore) {
+          bestScore = score;
+          bestScoreElement.textContent = bestScore;
+          try {
+            localStorage.setItem("snakeBestScore", String(bestScore));
+          } catch {}
+        }
+        if (snake.length === cells * cells) {
+          finishGame("Победа! Всё поле собрано!");
+          return false;
+        }
+        placeFood();
+      } else {
+        snake.pop();
+      }
+      return true;
     }
-    if (snake.length === cells * cells) {
-      finishGame("Победа! Всё поле собрано!");
-      return false;
+
+    function gameLoop(timestamp) {
+      if (state !== "playing") return;
+
+      if (!lastFrameTime) lastFrameTime = timestamp;
+      const delta = timestamp - lastFrameTime;
+      lastFrameTime = timestamp;
+      accumulator += delta;
+
+      while (accumulator >= stepDuration) {
+        accumulator -= stepDuration;
+        if (!update()) return;
+      }
+
+      draw(Math.min(accumulator / stepDuration, 1));
+      rafId = requestAnimationFrame(gameLoop);
     }
-    placeFood();
-  } else {
-    snake.pop();
-  }
-  return true;
-}
 
-function gameLoop(timestamp) {
-  if (state !== "playing") return;
+    function startGame() {
+      if (rafId) cancelAnimationFrame(rafId);
+      snake = [
+        { x: 10, y: 10 },
+        { x: 9, y: 10 },
+        { x: 8, y: 10 }
+      ];
+      prevSnake = snake.map(part => ({ ...part }));
+      direction = { x: 1, y: 0 };
+      nextDirection = { x: 1, y: 0 };
+      score = 0;
+      scoreElement.textContent = score;
+      messageElement.textContent = "";
+      startButton.textContent = "Начать заново";
+      state = "playing";
 
-  if (!lastFrameTime) lastFrameTime = timestamp;
-  const delta = timestamp - lastFrameTime;
-  lastFrameTime = timestamp;
-  accumulator += delta;
+      placeFood();
+      update();
 
-  while (accumulator >= stepDuration) {
-    accumulator -= stepDuration;
-    if (!update()) return;
-  }
+      lastFrameTime = 0;
+      accumulator = 0;
+      rafId = requestAnimationFrame(gameLoop);
+    }
 
-  draw(Math.min(accumulator / stepDuration, 1));
-  rafId = requestAnimationFrame(gameLoop);
-}
+    document.addEventListener("keydown", event => {
+      const newDirection = directions[event.code];
+      if (!newDirection) return;
+      event.preventDefault();
 
-function startGame() {
-  document.addEventListener("keydown", event => {
-  const newDirection = directions[event.code];
-  if (!newDirection) return;
-  event.preventDefault();
+      if (state === "ready") {
+        startGame();
+      }
 
-  if (state === "ready") {
-    startGame();
-  }
+      const isOpposite =
+        newDirection.x + direction.x === 0 &&
+        newDirection.y + direction.y === 0;
 
-  const isOpposite =
-    newDirection.x + direction.x === 0 &&
-    newDirection.y + direction.y === 0;
-
-  if (state === "playing" && !isOpposite) {
-    nextDirection = newDirection;
-  }
-});
-
-startButton.addEventListener("click", startGame);
-
-draw(1);
-drawBara();
-  if (rafId) cancelAnimationFrame(rafId);
-  snake = [
-    { x: 10, y: 10 },
-    { x: 9, y: 10 },
-    { x: 8, y: 10 }
-  ];
-  prevSnake = snake.map(part => ({ ...part }));
-  direction = { x: 1, y: 0 };
-  nextDirection = { x: 1, y: 0 };
-  score = 0;
-  scoreElement.textContent = score;
-  messageElement.textContent = "";
-  startButton.textContent = "Начать заново";
-  state = "playing";
-
-  placeFood();
-  update();
-
-  lastFrameTime = 0;
-  accumulator = 0;
-  rafId = requestAnimationFrame(gameLoop);
-}
+      if (state === "playing" && !isOpposite) {
+        nextDirection = newDirection;
+      }
+    });
 
     startButton.addEventListener("click", startGame);
 
-    // Показываем поле и персонажа сразу при загрузке страницы.
-    draw();
+    draw(1);
     drawBara();
   </script>
 </body>
