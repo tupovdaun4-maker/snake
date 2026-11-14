@@ -358,13 +358,31 @@ let rafId = null;
 }
 
 function getVisualPoints(progress) {
-  return snake.map((curr, i) => {
-    const prev = prevSnake[i] || prevSnake[prevSnake.length - 1];
-    return {
-      x: (interpolateCoord(prev.x, curr.x, progress) + 0.5) * cellSize,
-      y: (interpolateCoord(prev.y, curr.y, progress) + 0.5) * cellSize
-    };
-  });
+  if (snake.length === 0) return [];
+
+  // 1. Голова плавно движется от старой клетки (prevSnake) к новой (snake).
+  const headCurr = snake.at(0);
+  const headPrev = prevSnake.at(0);
+  const headPt = {
+    x: (interpolateCoord(headPrev.x, headCurr.x, progress) + 0.5) * cellSize,
+    y: (interpolateCoord(headPrev.y, headCurr.y, progress) + 0.5) * cellSize
+  };
+
+  // 2. Все средние точки строго фиксированы в центрах клеток (углы не срезаются).
+  const middlePts = snake.slice(1).map(part => ({
+    x: (part.x + 0.5) * cellSize,
+    y: (part.y + 0.5) * cellSize
+  }));
+
+  // 3. Кончик хвоста плавно подтягивается с последней клетки prevSnake.
+  const tailCurr = snake.at(-1);
+  const tailPrev = prevSnake.at(-1);
+  const tailPt = {
+    x: (interpolateCoord(tailPrev.x, tailCurr.x, progress) + 0.5) * cellSize,
+    y: (interpolateCoord(tailPrev.y, tailCurr.y, progress) + 0.5) * cellSize
+  };
+
+  return [headPt, ...middlePts, tailPt];
 }
 
 function draw(progress = 1) {
