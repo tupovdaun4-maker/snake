@@ -390,12 +390,46 @@ function draw(progress = 1) {
   ctx.fillStyle = "#183a2b";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // Сетка поля.
+  // 1. Сетка поля.
   ctx.strokeStyle = "rgba(183, 226, 170, 0.07)";
   ctx.lineWidth = 1;
   for (let i = 1; i < cells; i++) {
     const position = i * cellSize;
-    const cornerRadius = cellSize * 0.45; // Радиус скругления углов (от 0.1 до 0.5)
+    ctx.beginPath();
+    ctx.moveTo(position, 0);
+    ctx.lineTo(position, canvas.height);
+    ctx.moveTo(0, position);
+    ctx.lineTo(canvas.width, position);
+    ctx.stroke();
+  }
+
+  // 2. Яблоко.
+  const appleX = (food.x + 0.5) * cellSize;
+  const appleY = (food.y + 0.5) * cellSize;
+  ctx.fillStyle = "#f08069";
+  ctx.beginPath();
+  ctx.arc(appleX, appleY, cellSize * 0.34, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.strokeStyle = "#76533a";
+  ctx.lineWidth = 2;
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.moveTo(appleX, appleY - cellSize * 0.25);
+  ctx.lineTo(appleX + 2, appleY - cellSize * 0.43);
+  ctx.stroke();
+
+  // 3. Цельная змейка со скруглёнными поворотами.
+  const points = getVisualPoints(progress);
+  if (points.length === 0) return;
+
+  const bodyWidth = cellSize * 0.78;
+  const cornerRadius = cellSize * 0.45;
+
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  ctx.strokeStyle = "#72c888";
+  ctx.lineWidth = bodyWidth;
 
   ctx.beginPath();
   ctx.moveTo(points.at(0).x, points.at(0).y);
@@ -408,7 +442,7 @@ function draw(progress = 1) {
     const d1 = Math.hypot(curr.x - prev.x, curr.y - prev.y);
     const d2 = Math.hypot(next.x - curr.x, next.y - curr.y);
 
-    // Если змейка в этом месте проходит сквозь стену, разрываем линию.
+    // Если змейка проходит сквозь стену, разрываем линию.
     if (d1 > cellSize * 2 || d2 > cellSize * 2) {
       ctx.lineTo(curr.x, curr.y);
       ctx.stroke();
@@ -417,7 +451,6 @@ function draw(progress = 1) {
       continue;
     }
 
-    // Вычисляем точки начала и конца скругления (не больше половины длины сегмента).
     const r1 = Math.min(cornerRadius, d1 * 0.5);
     const r2 = Math.min(cornerRadius, d2 * 0.5);
 
@@ -434,7 +467,7 @@ function draw(progress = 1) {
     }
   }
 
-  // Доводим линию до самого кончика хвоста.
+  // Доводим линию до кончика хвоста.
   if (points.length > 1) {
     const prev = points.at(-2);
     const last = points.at(-1);
@@ -444,49 +477,7 @@ function draw(progress = 1) {
   }
   ctx.stroke();
 
-  // Яблоко.
-  const appleX = (food.x + 0.5) * cellSize;
-  const appleY = (food.y + 0.5) * cellSize;
-  ctx.fillStyle = "#f08069";
-  ctx.beginPath();
-  ctx.arc(appleX, appleY, cellSize * 0.34, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.strokeStyle = "#76533a";
-  ctx.lineWidth = 2;
-  ctx.lineCap = "round";
-  ctx.beginPath();
-  ctx.moveTo(appleX, appleY - cellSize * 0.25);
-  ctx.lineTo(appleX + 2, appleY - cellSize * 0.43);
-  ctx.stroke();
-
-  // Цельная змейка с закруглёнными краями.
-  const points = getVisualPoints(progress);
-  if (points.length === 0) return;
-
-  const bodyWidth = cellSize * 0.78;
-  ctx.lineCap = "round";
-  ctx.lineJoin = "round";
-  ctx.strokeStyle = "#72c888";
-  ctx.lineWidth = bodyWidth;
-
-  ctx.beginPath();
-  ctx.moveTo(points.at(0).x, points.at(0).y);
-
-  for (let i = 1; i < points.length; i++) {
-    const p1 = points[i - 1];
-    const p2 = points[i];
-    if (Math.abs(p2.x - p1.x) > cellSize * 2 || Math.abs(p2.y - p1.y) > cellSize * 2) {
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(p2.x, p2.y);
-    } else {
-      ctx.lineTo(p2.x, p2.y);
-    }
-  }
-  ctx.stroke();
-
-  // Голова (цветовой акцент и глаза).
+  // 4. Голова и глаза.
   const head = points.at(0);
   ctx.fillStyle = "#a5e6b1";
   ctx.beginPath();
@@ -508,7 +499,6 @@ function draw(progress = 1) {
     ctx.fill();
   }
 }
-
     function drawBara() {
       const c = baraCtx;
       const w = baraCanvas.width;
