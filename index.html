@@ -642,6 +642,28 @@ function gameLoop(timestamp) {
 }
 
 function startGame() {
+  document.addEventListener("keydown", event => {
+  const newDirection = directions[event.code];
+  if (!newDirection) return;
+  event.preventDefault();
+
+  if (state === "ready") {
+    startGame();
+  }
+
+  const isOpposite =
+    newDirection.x + direction.x === 0 &&
+    newDirection.y + direction.y === 0;
+
+  if (state === "playing" && !isOpposite) {
+    nextDirection = newDirection;
+  }
+});
+
+startButton.addEventListener("click", startGame);
+
+draw(1);
+drawBara();
   if (rafId) cancelAnimationFrame(rafId);
   snake = [
     { x: 10, y: 10 },
