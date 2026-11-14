@@ -336,7 +336,11 @@
     let score = 0;
     let bestScore = 0;
     let state = "ready";
-    let timer = null;
+    let prevSnake = snake.map(part => ({ ...part }));
+const stepDuration = 125;
+let lastFrameTime = 0;
+let accumulator = 0;
+let rafId = null;
 
     try {
       bestScore = Number(localStorage.getItem("snakeBestScore")) || 0;
@@ -346,76 +350,105 @@
 
     bestScoreElement.textContent = bestScore;
 
-    function draw() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = "#183a2b";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    function interpolateCoord(prev, curr, t) {
+  let diff = curr - prev;
+  if (diff > cells / 2) diff -= cells;
+  if (diff < -cells / 2) diff += cells;
+  return (prev + diff * t + cells) % cells;
+}
 
-      // Сетка поля.
-      ctx.strokeStyle = "rgba(183, 226, 170, 0.07)";
-      ctx.lineWidth = 1;
+function getVisualPoints(progress) {
+  return snake.map((curr, i) => {
+    const prev = prevSnake[i] || prevSnake[prevSnake.length - 1];
+    return {
+      x: (interpolateCoord(prev.x, curr.x, progress) + 0.5) * cellSize,
+      y: (interpolateCoord(prev.y, curr.y, progress) + 0.5) * cellSize
+    };
+  });
+}
 
-      for (let i = 1; i < cells; i++) {
-        const position = i * cellSize;
+function draw(progress = 1) {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = "#183a2b";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        ctx.beginPath();
-        ctx.moveTo(position, 0);
-        ctx.lineTo(position, canvas.height);
-        ctx.moveTo(0, position);
-        ctx.lineTo(canvas.width, position);
-        ctx.stroke();
-      }
+  // Сетка поля.
+  ctx.strokeStyle = "rgba(183, 226, 170, 0.07)";
+  ctx.lineWidth = 1;
+  for (let i = 1; i < cells; i++) {
+    const position = i * cellSize;
+    ctx.beginPath();
+    ctx.moveTo(position, 0);
+    ctx.lineTo(position, canvas.height);
+    ctx.moveTo(0, position);
+    ctx.lineTo(canvas.width, position);
+    ctx.stroke();
+  }
 
-      // Яблоко.
-      const appleX = (food.x + 0.5) * cellSize;
-      const appleY = (food.y + 0.5) * cellSize;
+  // Яблоко.
+  const appleX = (food.x + 0.5) * cellSize;
+  const appleY = (food.y + 0.5) * cellSize;
+  ctx.fillStyle = "#f08069";
+  ctx.beginPath();
+  ctx.arc(appleX, appleY, cellSize * 0.34, 0, Math.PI * 2);
+  ctx.fill();
 
-      ctx.fillStyle = "#f08069";
-      ctx.beginPath();
-      ctx.arc(appleX, appleY, cellSize * 0.34, 0, Math.PI * 2);
-      ctx.fill();
+  ctx.strokeStyle = "#76533a";
+  ctx.lineWidth = 2;
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.moveTo(appleX, appleY - cellSize * 0.25);
+  ctx.lineTo(appleX + 2, appleY - cellSize * 0.43);
+  ctx.stroke();
 
-      ctx.strokeStyle = "#76533a";
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(appleX, appleY - cellSize * 0.25);
-      ctx.lineTo(appleX + 2, appleY - cellSize * 0.43);
+  // Цельная змейка с закруглёнными краями.
+  const points = getVisualPoints(progress);
+  if (points.length === 0) return;
+
+  const bodyWidth = cellSize * 0.78;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  ctx.strokeStyle = "#72c888";
+  ctx.lineWidth = bodyWidth;
+
+  ctx.beginPath();
+  ctx.moveTo(points.x, points.y);
+
+  for (let i = 1; i < points.length; i++) {
+    const p1 = points[i - 1];
+    const p2 = points[i];
+    if (Math.abs(p2.x - p1.x) > cellSize * 2 || Math.abs(p2.y - p1.y) > cellSize * 2) {
       ctx.stroke();
-
-      // Змейка.
-      snake.forEach((part, index) => {
-        const inset = index === 0 ? 1.5 : 2.5;
-        const x = part.x * cellSize + inset;
-        const y = part.y * cellSize + inset;
-        const size = cellSize - inset * 2;
-
-        ctx.fillStyle = index === 0 ? "#a5e6b1" : "#72c888";
-        ctx.beginPath();
-        ctx.roundRect(x, y, size, size, cellSize * 0.25);
-        ctx.fill();
-      });
-
-      // Глаза на голове.
-      const head = snake[0];
-      const centerX = (head.x + 0.5) * cellSize;
-      const centerY = (head.y + 0.5) * cellSize;
-
-      ctx.fillStyle = "#24543a";
-
-      if (direction.x !== 0) {
-        const eyeX = centerX + direction.x * cellSize * 0.15;
-        ctx.beginPath();
-        ctx.arc(eyeX, centerY - cellSize * 0.16, 1.8, 0, Math.PI * 2);
-        ctx.arc(eyeX, centerY + cellSize * 0.16, 1.8, 0, Math.PI * 2);
-        ctx.fill();
-      } else {
-        const eyeY = centerY + direction.y * cellSize * 0.15;
-        ctx.beginPath();
-        ctx.arc(centerX - cellSize * 0.16, eyeY, 1.8, 0, Math.PI * 2);
-        ctx.arc(centerX + cellSize * 0.16, eyeY, 1.8, 0, Math.PI * 2);
-        ctx.fill();
-      }
+      ctx.beginPath();
+      ctx.moveTo(p2.x, p2.y);
+    } else {
+      ctx.lineTo(p2.x, p2.y);
     }
+  }
+  ctx.stroke();
+
+  // Голова (цветовой акцент и глаза).
+  const head = points;
+  ctx.fillStyle = "#a5e6b1";
+  ctx.beginPath();
+  ctx.arc(head.x, head.y, bodyWidth / 2, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = "#24543a";
+  if (direction.x !== 0) {
+    const eyeX = head.x + direction.x * cellSize * 0.16;
+    ctx.beginPath();
+    ctx.arc(eyeX, head.y - cellSize * 0.16, 2, 0, Math.PI * 2);
+    ctx.arc(eyeX, head.y + cellSize * 0.16, 2, 0, Math.PI * 2);
+    ctx.fill();
+  } else {
+    const eyeY = head.y + direction.y * cellSize * 0.16;
+    ctx.beginPath();
+    ctx.arc(head.x - cellSize * 0.16, eyeY, 2, 0, Math.PI * 2);
+    ctx.arc(head.x + cellSize * 0.16, eyeY, 2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
 
     function drawBara() {
       const c = baraCtx;
@@ -541,108 +574,96 @@
     }
 
     function finishGame(text) {
-      clearInterval(timer);
-      timer = null;
-      state = "over";
-      messageElement.textContent = text;
-      startButton.textContent = "Играть ещё";
-      draw();
+  if (rafId) cancelAnimationFrame(rafId);
+  rafId = null;
+  state = "over";
+  messageElement.textContent = text;
+  startButton.textContent = "Играть ещё";
+  draw(1);
+}
+
+function update() {
+  prevSnake = snake.map(part => ({ ...part }));
+  direction = nextDirection;
+
+  const head = {
+    x: (snake.x + direction.x + cells) % cells,
+    y: (snake.y + direction.y + cells) % cells
+  };
+
+  const ateFood = head.x === food.x && head.y === food.y;
+  const bodyToCheck = ateFood ? snake : snake.slice(0, -1);
+  const hitSelf = bodyToCheck.some(part => part.x === head.x && part.y === head.y);
+
+  if (hitSelf) {
+    finishGame(`Игра окончена! Счёт: ${score}`);
+    return false;
+  }
+
+  snake.unshift(head);
+
+  if (ateFood) {
+    prevSnake.push({ ...prevSnake[prevSnake.length - 1] });
+    score += 1;
+    scoreElement.textContent = score;
+    if (score > bestScore) {
+      bestScore = score;
+      bestScoreElement.textContent = bestScore;
+      try {
+        localStorage.setItem("snakeBestScore", String(bestScore));
+      } catch {}
     }
-
-    function update() {
-      direction = nextDirection;
-
-      // Выход за край переносит голову на противоположную сторону.
-      const head = {
-        x: (snake[0].x + direction.x + cells) % cells,
-        y: (snake[0].y + direction.y + cells) % cells
-      };
-
-      const ateFood = head.x === food.x && head.y === food.y;
-
-      // Если змейка не ест, хвост уходит с клетки в этот же ход.
-      const bodyToCheck = ateFood ? snake : snake.slice(0, -1);
-      const hitSelf = bodyToCheck.some(
-        part => part.x === head.x && part.y === head.y
-      );
-
-      if (hitSelf) {
-        finishGame(`Игра окончена! Счёт: ${score}`);
-        return;
-      }
-
-      snake.unshift(head);
-
-      if (ateFood) {
-        score += 1;
-        scoreElement.textContent = score;
-
-        if (score > bestScore) {
-          bestScore = score;
-          bestScoreElement.textContent = bestScore;
-
-          try {
-            localStorage.setItem("snakeBestScore", String(bestScore));
-          } catch {
-            // Игра продолжится, если браузер запрещает localStorage.
-          }
-        }
-
-        if (snake.length === cells * cells) {
-          finishGame("Победа! Всё поле собрано!");
-          return;
-        }
-
-        placeFood();
-      } else {
-        snake.pop();
-      }
-
-      draw();
+    if (snake.length === cells * cells) {
+      finishGame("Победа! Всё поле собрано!");
+      return false;
     }
+    placeFood();
+  } else {
+    snake.pop();
+  }
+  return true;
+}
 
-    function startGame() {
-      clearInterval(timer);
+function gameLoop(timestamp) {
+  if (state !== "playing") return;
 
-      snake = [
-        { x: 10, y: 10 },
-        { x: 9, y: 10 },
-        { x: 8, y: 10 }
-      ];
+  if (!lastFrameTime) lastFrameTime = timestamp;
+  const delta = timestamp - lastFrameTime;
+  lastFrameTime = timestamp;
+  accumulator += delta;
 
-      direction = { x: 1, y: 0 };
-      nextDirection = { x: 1, y: 0 };
-      score = 0;
-      scoreElement.textContent = score;
-      messageElement.textContent = "";
-      startButton.textContent = "Начать заново";
-      state = "playing";
+  while (accumulator >= stepDuration) {
+    accumulator -= stepDuration;
+    if (!update()) return;
+  }
 
-      placeFood();
-      draw();
+  draw(Math.min(accumulator / stepDuration, 1));
+  rafId = requestAnimationFrame(gameLoop);
+}
 
-      timer = setInterval(update, 125);
-    }
+function startGame() {
+  if (rafId) cancelAnimationFrame(rafId);
+  snake = [
+    { x: 10, y: 10 },
+    { x: 9, y: 10 },
+    { x: 8, y: 10 }
+  ];
+  prevSnake = snake.map(part => ({ ...part }));
+  direction = { x: 1, y: 0 };
+  nextDirection = { x: 1, y: 0 };
+  score = 0;
+  scoreElement.textContent = score;
+  messageElement.textContent = "";
+  startButton.textContent = "Начать заново";
+  state = "playing";
 
-    document.addEventListener("keydown", event => {
-      const newDirection = directions[event.code];
+  placeFood();
+  update();
 
-      if (!newDirection) return;
-
-      event.preventDefault();
-
-      if (state === "ready") {
-        startGame();
-      }
-
-      const isOpposite =
-        newDirection.x + direction.x === 0 &&
-        newDirection.y + direction.y === 0;
-
-      if (state === "playing" && !isOpposite) {
-        nextDirection = newDirection;
-      }
-    });
+  lastFrameTime = 0;
+  accumulator = 0;
+  rafId = requestAnimationFrame(gameLoop);
+}
 
     startButton.addEventListener("click", startGame);
 
