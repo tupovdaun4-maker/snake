@@ -447,25 +447,80 @@
       );
       ctx.fill();
 
-      // Плавное перемещение между клетками.
-      const eased = progress * progress * (3 - 2 * progress);
+      // Плавно перемещаем каждую часть змейки между клетками.
+const eased = progress * progress * (3 - 2 * progress);
 
-      snake.forEach((part, index) => {
-        const from = previousSnake[index] || part;
-        const x = from.x + (part.x - from.x) * eased;
-        const y = from.y + (part.y - from.y) * eased;
-        const inset = index === 0 ? 1.5 : 2;
-        const size = cellSize - inset * 2;
+const points = snake.map((part, index) => {
+  const from = previousSnake[index] || part;
 
-        ctx.fillStyle = index === 0 ? "#a5e6b1" : "#72c888";
-        drawRoundedRect(
-          x * cellSize + inset,
-          y * cellSize + inset,
-          size,
-          size,
-          6
-        );
-      });
+  return {
+    x: (from.x + (part.x - from.x) * eased + 0.5) * cellSize,
+    y: (from.y + (part.y - from.y) * eased + 0.5) * cellSize
+  };
+});
+
+if (points.length > 0) {
+  // Рисуем путь через середины частей змейки.
+  const path = new Path2D();
+  path.moveTo(points[0].x, points[0].y);
+
+  for (let i = 1; i < points.length - 1; i++) {
+    const midpointX = (points[i].x + points[i + 1].x) / 2;
+    const midpointY = (points[i].y + points[i + 1].y) / 2;
+
+    path.quadraticCurveTo(
+      points[i].x,
+      points[i].y,
+      midpointX,
+      midpointY
+    );
+  }
+
+  if (points.length > 1) {
+    const tail = points[points.length - 1];
+    path.lineTo(tail.x, tail.y);
+  }
+
+  // Тёмная тонкая обводка помогает телу выглядеть цельным.
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  ctx.strokeStyle = "#4b9961";
+  ctx.lineWidth = cellSize * 0.88;
+  ctx.stroke(path);
+
+  // Основная часть тела.
+  ctx.strokeStyle = "#72c888";
+  ctx.lineWidth = cellSize * 0.76;
+  ctx.stroke(path);
+
+  // Голова поверх тела.
+  const head = points[0];
+
+  ctx.fillStyle = "#a5e6b1";
+  ctx.beginPath();
+  ctx.arc(head.x, head.y, cellSize * 0.39, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Глаза находятся относительно головы и двигаются вместе с ней.
+  const eyeOffset = cellSize * 0.15;
+  ctx.fillStyle = "#24543a";
+
+  if (direction.x !== 0) {
+    const eyeX = head.x + direction.x * cellSize * 0.1;
+
+    ctx.beginPath();
+    ctx.arc(eyeX, head.y - eyeOffset, 1.8, 0, Math.PI * 2);
+    ctx.arc(eyeX, head.y + eyeOffset, 1.8, 0, Math.PI * 2);
+    ctx.fill();
+  } else {
+    const eyeY = head.y + direction.y * cellSize * 0.1;
+
+    ctx.beginPath();
+    ctx.arc(head.x - eyeOffset, eyeY, 1.8, 0, Math.PI * 2);
+    ctx.arc(head.x + eyeOffset, eyeY, 1.8, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
 
       // Глаза используют те же интерполированные координаты, что и голова.
       if (snake.length > 0) {
