@@ -395,13 +395,54 @@ function draw(progress = 1) {
   ctx.lineWidth = 1;
   for (let i = 1; i < cells; i++) {
     const position = i * cellSize;
-    ctx.beginPath();
-    ctx.moveTo(position, 0);
-    ctx.lineTo(position, canvas.height);
-    ctx.moveTo(0, position);
-    ctx.lineTo(canvas.width, position);
-    ctx.stroke();
+    const cornerRadius = cellSize * 0.45; // Радиус скругления углов (от 0.1 до 0.5)
+
+  ctx.beginPath();
+  ctx.moveTo(points.at(0).x, points.at(0).y);
+
+  for (let i = 1; i < points.length - 1; i++) {
+    const prev = points.at(i - 1);
+    const curr = points.at(i);
+    const next = points.at(i + 1);
+
+    const d1 = Math.hypot(curr.x - prev.x, curr.y - prev.y);
+    const d2 = Math.hypot(next.x - curr.x, next.y - curr.y);
+
+    // Если змейка в этом месте проходит сквозь стену, разрываем линию.
+    if (d1 > cellSize * 2 || d2 > cellSize * 2) {
+      ctx.lineTo(curr.x, curr.y);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(next.x, next.y);
+      continue;
+    }
+
+    // Вычисляем точки начала и конца скругления (не больше половины длины сегмента).
+    const r1 = Math.min(cornerRadius, d1 * 0.5);
+    const r2 = Math.min(cornerRadius, d2 * 0.5);
+
+    if (r1 > 0.1 && r2 > 0.1) {
+      const startX = curr.x - ((curr.x - prev.x) / d1) * r1;
+      const startY = curr.y - ((curr.y - prev.y) / d1) * r1;
+      const endX = curr.x + ((next.x - curr.x) / d2) * r2;
+      const endY = curr.y + ((next.y - curr.y) / d2) * r2;
+
+      ctx.lineTo(startX, startY);
+      ctx.quadraticCurveTo(curr.x, curr.y, endX, endY);
+    } else {
+      ctx.lineTo(curr.x, curr.y);
+    }
   }
+
+  // Доводим линию до самого кончика хвоста.
+  if (points.length > 1) {
+    const prev = points.at(-2);
+    const last = points.at(-1);
+    if (Math.hypot(last.x - prev.x, last.y - prev.y) <= cellSize * 2) {
+      ctx.lineTo(last.x, last.y);
+    }
+  }
+  ctx.stroke();
 
   // Яблоко.
   const appleX = (food.x + 0.5) * cellSize;
@@ -419,116 +460,51 @@ function draw(progress = 1) {
   ctx.lineTo(appleX + 2, appleY - cellSize * 0.43);
   ctx.stroke();
 
-  // Реалистичная змейка с плавным сужением к хвосту и скруглёнными дугами.
+  // Цельная змейка с закруглёнными краями.
   const points = getVisualPoints(progress);
   if (points.length === 0) return;
 
-  const headRadius = cellSize * 0.42;
-  const tailRadius = cellSize * 0.14;
-  const cornerRadius = cellSize * 0.45;
+  const bodyWidth = cellSize * 0.78;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  ctx.strokeStyle = "#72c888";
+  ctx.lineWidth = bodyWidth;
 
-  const segments = [];
-  let cursor = points.at(0);
+  ctx.beginPath();
+  ctx.moveTo(points.at(0).x, points.at(0).y);
 
-  for (let i = 1; i < points.length - 1; i++) {
-    const prev = points.at(i - 1);
-    const curr = points.at(i);
-    const next = points.at(i + 1);
-
-    const d1 = Math.hypot(curr.x - prev.x, curr.y - prev.y);
-    const d2 = Math.hypot(next.x - curr.x, next.y - curr.y);
-
-    if (d1 > cellSize * 2 || d2 > cellSize * 2) {
-      segments.push({ type: "line", p0: cursor, p1: curr });
-      cursor = next;
-      continue;
-    }
-
-    const r1 = Math.min(cornerRadius, d1 * 0.5);
-    const r2 = Math.min(cornerRadius, d2 * 0.5);
-
-    if (r1 > 0.1 && r2 > 0.1) {
-      const startPt = {
-        x: curr.x - ((curr.x - prev.x) / d1) * r1,
-        y: curr.y - ((curr.y - prev.y) / d1) * r1
-      };
-      const endPt = {
-        x: curr.x + ((next.x - curr.x) / d2) * r2,
-        y: curr.y + ((next.y - curr.y) / d2) * r2
-      };
-
-      segments.push({ type: "line", p0: cursor, p1: startPt });
-      segments.push({ type: "curve", p0: startPt, p1: curr, p2: endPt });
-      cursor = endPt;
-    } else {
-      segments.push({ type: "line", p0: cursor, p1: curr });
-      cursor = curr;
-    }
-  }
-
-  if (points.length > 1) {
-    const prev = points.at(-2);
-    const last = points.at(-1);
-    if (Math.hypot(last.x - prev.x, last.y - prev.y) <= cellSize * 2) {
-      segments.push({ type: "line", p0: cursor, p1: last });
-    }
-  }
-
-  let totalLength = 0;
-  for (const seg of segments) {
-    seg.len = seg.type === "line"
-      ? Math.hypot(seg.p1.x - seg.p0.x, seg.p1.y - seg.p0.y)
-      : (Math.hypot(seg.p1.x - seg.p0.x, seg.p1.y - seg.p0.y) +
-         Math.hypot(seg.p2.x - seg.p1.x, seg.p2.y - seg.p1.y)) * 0.85;
-    totalLength += seg.len;
-  }
-
-  ctx.fillStyle = "#72c888";
-  let passedLength = 0;
-
-  for (const seg of segments) {
-    const steps = Math.max(1, Math.ceil(seg.len / 1.5));
-    for (let s = 0; s <= steps; s++) {
-      const t = s / steps;
-      const ratio = totalLength > 0 ? (passedLength + seg.len * t) / totalLength : 0;
-      const radius = headRadius - (headRadius - tailRadius) * Math.pow(ratio, 1.3);
-
-      let x, y;
-      if (seg.type === "line") {
-        x = seg.p0.x + (seg.p1.x - seg.p0.x) * t;
-        y = seg.p0.y + (seg.p1.y - seg.p0.y) * t;
-      } else {
-        const inv = 1 - t;
-        x = inv * inv * seg.p0.x + 2 * inv * t * seg.p1.x + t * t * seg.p2.x;
-        y = inv * inv * seg.p0.y + 2 * inv * t * seg.p1.y + t * t * seg.p2.y;
-      }
-
+  for (let i = 1; i < points.length; i++) {
+    const p1 = points[i - 1];
+    const p2 = points[i];
+    if (Math.abs(p2.x - p1.x) > cellSize * 2 || Math.abs(p2.y - p1.y) > cellSize * 2) {
+      ctx.stroke();
       ctx.beginPath();
-      ctx.arc(x, y, radius, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.moveTo(p2.x, p2.y);
+    } else {
+      ctx.lineTo(p2.x, p2.y);
     }
-    passedLength += seg.len;
   }
+  ctx.stroke();
 
-  // Голова и глаза.
+  // Голова (цветовой акцент и глаза).
   const head = points.at(0);
   ctx.fillStyle = "#a5e6b1";
   ctx.beginPath();
-  ctx.arc(head.x, head.y, headRadius, 0, Math.PI * 2);
+  ctx.arc(head.x, head.y, bodyWidth / 2, 0, Math.PI * 2);
   ctx.fill();
 
   ctx.fillStyle = "#24543a";
   if (direction.x !== 0) {
     const eyeX = head.x + direction.x * cellSize * 0.16;
     ctx.beginPath();
-    ctx.arc(eyeX, head.y - cellSize * 0.17, 2.1, 0, Math.PI * 2);
-    ctx.arc(eyeX, head.y + cellSize * 0.17, 2.1, 0, Math.PI * 2);
+    ctx.arc(eyeX, head.y - cellSize * 0.16, 2, 0, Math.PI * 2);
+    ctx.arc(eyeX, head.y + cellSize * 0.16, 2, 0, Math.PI * 2);
     ctx.fill();
   } else {
     const eyeY = head.y + direction.y * cellSize * 0.16;
     ctx.beginPath();
-    ctx.arc(head.x - cellSize * 0.17, eyeY, 2.1, 0, Math.PI * 2);
-    ctx.arc(head.x + cellSize * 0.17, eyeY, 2.1, 0, Math.PI * 2);
+    ctx.arc(head.x - cellSize * 0.16, eyeY, 2, 0, Math.PI * 2);
+    ctx.arc(head.x + cellSize * 0.16, eyeY, 2, 0, Math.PI * 2);
     ctx.fill();
   }
 }
