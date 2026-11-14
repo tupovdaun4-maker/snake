@@ -41,11 +41,7 @@
       padding: 28px;
       border: 1px solid rgba(193, 235, 190, 0.12);
       border-radius: 30px;
-      background: linear-gradient(
-        155deg,
-        rgba(31, 66, 49, 0.97),
-        rgba(20, 48, 37, 0.98)
-      );
+      background: linear-gradient(155deg, rgba(31, 66, 49, 0.97), rgba(20, 48, 37, 0.98));
       box-shadow:
         0 28px 80px rgba(0, 0, 0, 0.32),
         inset 0 1px rgba(255, 255, 255, 0.06);
@@ -272,7 +268,6 @@
     const cells = 21;
     const cellSize = canvas.width / cells;
 
-    // Физические клавиши WASD работают и при русской раскладке.
     const directions = {
       KeyW: { x: 0, y: -1 },
       KeyS: { x: 0, y: 1 },
@@ -329,7 +324,6 @@
       const newDirection = directions[keyCode];
       if (!newDirection) return;
 
-      // Не разрешаем мгновенно развернуться в противоположную сторону.
       const isOpposite =
         newDirection.x + direction.x === 0 &&
         newDirection.y + direction.y === 0;
@@ -348,7 +342,9 @@
     function update() {
       direction = nextDirection;
 
+      // Запоминаем положение каждой части до шага.
       const oldSnake = snake.map(part => ({ ...part }));
+
       const head = {
         x: snake[0].x + direction.x,
         y: snake[0].y + direction.y
@@ -360,7 +356,6 @@
         head.x < 0 || head.x >= cells ||
         head.y < 0 || head.y >= cells;
 
-      // Если змейка не ест, хвост сдвинется и освободит клетку.
       const bodyToCheck = ateFood ? snake : snake.slice(0, -1);
       const hitSelf = bodyToCheck.some(
         part => part.x === head.x && part.y === head.y
@@ -394,153 +389,148 @@
         }
       }
 
-      // Координаты предыдущего положения нужны для плавной анимации.
+      // Каждая часть начинается со своей позиции до шага.
+      // Это сохраняет плавное движение и тела, и хвоста.
       previousSnake = snake.map((part, index) => {
-  let previousIndex;
-
-  if (index === 0) {
-    previousIndex = 0;
-  } else if (index === snake.length - 1) {
-    previousIndex = oldSnake.length - 1;
-  } else {
-    previousIndex = index - 1;
-  }
-
-  return oldSnake[previousIndex] || part;
-});
+        const oldIndex = Math.min(index, oldSnake.length - 1);
+        return oldSnake[oldIndex] || part;
+      });
     }
 
     function draw(progress = 1) {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.fillStyle = "#183a2b";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = "#183a2b";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  ctx.strokeStyle = "rgba(183, 226, 170, 0.055)";
-  ctx.lineWidth = 1;
+      ctx.strokeStyle = "rgba(183, 226, 170, 0.055)";
+      ctx.lineWidth = 1;
 
-  for (let i = 1; i < cells; i++) {
-    const position = i * cellSize;
+      for (let i = 1; i < cells; i++) {
+        const position = i * cellSize;
 
-    ctx.beginPath();
-    ctx.moveTo(position, 0);
-    ctx.lineTo(position, canvas.height);
-    ctx.moveTo(0, position);
-    ctx.lineTo(canvas.width, position);
-    ctx.stroke();
-  }
+        ctx.beginPath();
+        ctx.moveTo(position, 0);
+        ctx.lineTo(position, canvas.height);
+        ctx.moveTo(0, position);
+        ctx.lineTo(canvas.width, position);
+        ctx.stroke();
+      }
 
-  const foodX = (food.x + 0.5) * cellSize;
-  const foodY = (food.y + 0.5) * cellSize;
+      // Яблоко с округлой формой, черенком и листиком.
+      const foodX = (food.x + 0.5) * cellSize;
+      const foodY = (food.y + 0.5) * cellSize;
 
-  ctx.save();
-  ctx.translate(foodX, foodY);
-  ctx.scale(cellSize, cellSize);
+      ctx.save();
+      ctx.translate(foodX, foodY);
+      ctx.scale(cellSize, cellSize);
 
-  ctx.fillStyle = "rgba(242, 163, 126, 0.12)";
-  ctx.beginPath();
-  ctx.arc(0, 0, 0.46, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.fillStyle = "#f08069";
-  ctx.beginPath();
-  ctx.moveTo(0, -0.12);
-  ctx.bezierCurveTo(-0.12, -0.25, -0.39, -0.23, -0.39, 0.02);
-  ctx.bezierCurveTo(-0.39, 0.24, -0.20, 0.39, -0.06, 0.36);
-  ctx.bezierCurveTo(-0.02, 0.35, 0.02, 0.35, 0.06, 0.36);
-  ctx.bezierCurveTo(0.20, 0.39, 0.39, 0.24, 0.39, 0.02);
-  ctx.bezierCurveTo(0.39, -0.23, 0.12, -0.25, 0, -0.12);
-  ctx.closePath();
-  ctx.fill();
-
-  ctx.fillStyle = "rgba(255, 224, 190, 0.55)";
-  ctx.beginPath();
-  ctx.ellipse(-0.17, 0.02, 0.055, 0.12, -0.35, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.strokeStyle = "#76533a";
-  ctx.lineWidth = 0.045;
-  ctx.lineCap = "round";
-  ctx.beginPath();
-  ctx.moveTo(0, -0.20);
-  ctx.quadraticCurveTo(0.02, -0.31, 0.08, -0.34);
-  ctx.stroke();
-
-  ctx.fillStyle = "#8bc878";
-  ctx.beginPath();
-  ctx.moveTo(0.025, -0.27);
-  ctx.quadraticCurveTo(0.16, -0.39, 0.22, -0.29);
-  ctx.quadraticCurveTo(0.15, -0.20, 0.025, -0.27);
-  ctx.fill();
-
-  ctx.restore();
-
-  const eased = progress * progress * (3 - 2 * progress);
-
-  const points = snake.map((part, index) => {
-    const from = previousSnake[index] || part;
-    const x = from.x + (part.x - from.x) * eased;
-    const y = from.y + (part.y - from.y) * eased;
-
-    return {
-      x: (x + 0.5) * cellSize,
-      y: (y + 0.5) * cellSize
-    };
-  });
-
-  if (points.length > 0) {
-    const bodyPath = new Path2D();
-    bodyPath.moveTo(points[0].x, points[0].y);
-
-    for (let i = 1; i < points.length - 1; i++) {
-      const midpointX = (points[i].x + points[i + 1].x) / 2;
-      const midpointY = (points[i].y + points[i + 1].y) / 2;
-
-      bodyPath.quadraticCurveTo(
-        points[i].x,
-        points[i].y,
-        midpointX,
-        midpointY
-      );
-    }
-
-    if (points.length > 1) {
-      const tail = points[points.length - 1];
-      bodyPath.lineTo(tail.x, tail.y);
-    }
-
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
-
-    ctx.strokeStyle = "#4b9961";
-    ctx.lineWidth = cellSize * 0.88;
-    ctx.stroke(bodyPath);
-
-    ctx.strokeStyle = "#72c888";
-    ctx.lineWidth = cellSize * 0.76;
-    ctx.stroke(bodyPath);
-
-    const head = points[0];
-    const eyeOffset = cellSize * 0.15;
-
-    ctx.fillStyle = "#24543a";
-
-    if (direction.x !== 0) {
-      const eyeX = head.x + direction.x * cellSize * 0.1;
-
+      ctx.fillStyle = "rgba(242, 163, 126, 0.12)";
       ctx.beginPath();
-      ctx.arc(eyeX, head.y - eyeOffset, 1.8, 0, Math.PI * 2);
-      ctx.arc(eyeX, head.y + eyeOffset, 1.8, 0, Math.PI * 2);
+      ctx.arc(0, 0, 0.46, 0, Math.PI * 2);
       ctx.fill();
-    } else {
-      const eyeY = head.y + direction.y * cellSize * 0.1;
 
+      ctx.fillStyle = "#f08069";
       ctx.beginPath();
-      ctx.arc(head.x - eyeOffset, eyeY, 1.8, 0, Math.PI * 2);
-      ctx.arc(head.x + eyeOffset, eyeY, 1.8, 0, Math.PI * 2);
+      ctx.moveTo(0, -0.12);
+      ctx.bezierCurveTo(-0.12, -0.25, -0.39, -0.23, -0.39, 0.02);
+      ctx.bezierCurveTo(-0.39, 0.24, -0.20, 0.39, -0.06, 0.36);
+      ctx.bezierCurveTo(-0.02, 0.35, 0.02, 0.35, 0.06, 0.36);
+      ctx.bezierCurveTo(0.20, 0.39, 0.39, 0.24, 0.39, 0.02);
+      ctx.bezierCurveTo(0.39, -0.23, 0.12, -0.25, 0, -0.12);
+      ctx.closePath();
       ctx.fill();
+
+      ctx.fillStyle = "rgba(255, 224, 190, 0.55)";
+      ctx.beginPath();
+      ctx.ellipse(-0.17, 0.02, 0.055, 0.12, -0.35, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = "#76533a";
+      ctx.lineWidth = 0.045;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(0, -0.20);
+      ctx.quadraticCurveTo(0.02, -0.31, 0.08, -0.34);
+      ctx.stroke();
+
+      ctx.fillStyle = "#8bc878";
+      ctx.beginPath();
+      ctx.moveTo(0.025, -0.27);
+      ctx.quadraticCurveTo(0.16, -0.39, 0.22, -0.29);
+      ctx.quadraticCurveTo(0.15, -0.20, 0.025, -0.27);
+      ctx.fill();
+
+      ctx.restore();
+
+      // Интерполяция плавно перемещает все сегменты между клетками.
+      const eased = progress * progress * (3 - 2 * progress);
+
+      const points = snake.map((part, index) => {
+        const from = previousSnake[index] || part;
+        const x = from.x + (part.x - from.x) * eased;
+        const y = from.y + (part.y - from.y) * eased;
+
+        return {
+          x: (x + 0.5) * cellSize,
+          y: (y + 0.5) * cellSize
+        };
+      });
+
+      if (points.length > 0) {
+        const bodyPath = new Path2D();
+        bodyPath.moveTo(points[0].x, points[0].y);
+
+        for (let i = 1; i < points.length - 1; i++) {
+          const midpointX = (points[i].x + points[i + 1].x) / 2;
+          const midpointY = (points[i].y + points[i + 1].y) / 2;
+
+          bodyPath.quadraticCurveTo(
+            points[i].x,
+            points[i].y,
+            midpointX,
+            midpointY
+          );
+        }
+
+        if (points.length > 1) {
+          const tail = points[points.length - 1];
+          bodyPath.lineTo(tail.x, tail.y);
+        }
+
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+
+        ctx.strokeStyle = "#4b9961";
+        ctx.lineWidth = cellSize * 0.88;
+        ctx.stroke(bodyPath);
+
+        ctx.strokeStyle = "#72c888";
+        ctx.lineWidth = cellSize * 0.76;
+        ctx.stroke(bodyPath);
+
+        // Глаза расположены относительно плавно движущейся головы.
+        const head = points[0];
+        const eyeOffset = cellSize * 0.15;
+
+        ctx.fillStyle = "#24543a";
+
+        if (direction.x !== 0) {
+          const eyeX = head.x + direction.x * cellSize * 0.1;
+
+          ctx.beginPath();
+          ctx.arc(eyeX, head.y - eyeOffset, 1.8, 0, Math.PI * 2);
+          ctx.arc(eyeX, head.y + eyeOffset, 1.8, 0, Math.PI * 2);
+          ctx.fill();
+        } else {
+          const eyeY = head.y + direction.y * cellSize * 0.1;
+
+          ctx.beginPath();
+          ctx.arc(head.x - eyeOffset, eyeY, 1.8, 0, Math.PI * 2);
+          ctx.arc(head.x + eyeOffset, eyeY, 1.8, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
     }
-  }
-}
 
     function gameLoop(timestamp) {
       if (state === "playing") {
@@ -581,17 +571,16 @@
 
     startButton.addEventListener("click", startGame);
 
-    // Начальный экран.
     snake = [
       { x: 10, y: 10 },
       { x: 9, y: 10 },
       { x: 8, y: 10 }
     ];
 
-    previousSnake = snake.map((part, index) => {
-  const oldIndex = Math.min(index, oldSnake.length - 1);
-  return oldSnake[oldIndex] || part;
-});
+    previousSnake = snake.map(part => ({ ...part }));
+    direction = directions.KeyD;
+    nextDirection = directions.KeyD;
+    food = { x: 14, y: 10 };
 
     draw(1);
     requestAnimationFrame(gameLoop);
