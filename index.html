@@ -310,73 +310,8 @@ let bgMusicTimer = null;
 let isMuted = false;
 
 // Пентатоника (ля минор / до мажор) — все ноты гармонируют друг с другом
-const chillNotes = [
-  261.63, // C4 (До)
-  293.66, // D4 (Ре)
-  329.63, // E4 (Ми)
-  392.00, // G4 (Соль)
-  440.00, // A4 (Ля)
-  523.25, // C5 (До)
-  587.33, // D5 (Ре)
-  659.25  // E5 (Ми)
-];
 
-function initAudio() {
-  if (!audioCtx) {
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  }
-  if (audioCtx.state === "suspended") {
-    audioCtx.resume();
-  }
-}
-
-// Мягкая нота с плавным затуханием
-function playAmbientNote(freq, duration = 3.5, volume = 0.06) {
-  if (!audioCtx || isMuted) return;
-
-  const now = audioCtx.currentTime;
-  const osc = audioCtx.createOscillator();
-  const gain = audioCtx.createGain();
-
-  // Синусоида даёт самый чистый, мягкий и расслабляющий звук
-  osc.type = "sine";
-  osc.frequency.setValueAtTime(freq, now);
-
-  // Плавное нарастание (attack) и долгое затухание (release)
-  gain.gain.setValueAtTime(0.0001, now);
-  gain.gain.linearRampToValueAtTime(volume, now + 0.6);
-  gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
-
-  osc.connect(gain);
-  gain.connect(audioCtx.destination);
-
-  osc.start(now);
-  osc.stop(now + duration + 0.1);
-}
-
-// Запуск фоновой мелодии
-function startAmbientMusic() {
-  initAudio();
-  if (bgMusicTimer) clearInterval(bgMusicTimer);
-
-  // Сразу играем первый мягкий аккорд из двух нот
-  playAmbientNote(261.63, 4.5, 0.05);
-playAmbientNote(329.63, 4.5, 0.04);
-
-  // Каждые 2.2 секунды добавляем случайную гармоничную ноту
-  bgMusicTimer = setInterval(() => {
-    if (state !== "playing" || isMuted) return;
-
-    const note = chillNotes[Math.floor(Math.random() * chillNotes.length)];
-    playAmbientNote(note, 3.8, 0.055);
-
-    // С вероятностью 40% добавляем глубокую басовую ноту на октаву ниже
-    if (Math.random() < 0.4) {
-      const bass = chillNotes[Math.floor(Math.random() * 3)] / 2;
-      playAmbientNote(bass, 5.0, 0.045);
-    }
-  }, 2200);
-}
+    
 
 // Мягкий звук при поедании яблока (колокольчик)
 function playEatSound(isBonus = false) {
