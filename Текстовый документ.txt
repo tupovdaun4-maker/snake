@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Змейка</title>
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 20px;
+      color: #ecfdf5;
+      font-family: system-ui, sans-serif;
+      background:
+        radial-gradient(ellipse at top, #164e3b 0%, transparent 55%),
+        #07130f;
+    }
+
+    .game {
+      width: min(100%, 480px);
+      text-align: center;
+    }
+
+    h1 {
+      margin: 0 0 6px;
+      font-size: clamp(2rem, 8vw, 3rem);
+      letter-spacing: 2px;
+    }
+
+    .subtitle {
+      margin: 0 0 20px;
+      color: #9bb9aa;
+    }
+
+    .panel {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+      padding: 12px 16px;
+      border: 1px solid #285342;
+      border-radius: 14px;
+      background: #0d2119;
+    }
+
+    .score {
+      font-size: 1.1rem;
+      font-weight: 700;
+    }
+
+    .score span { color: #86efac; }
+
+    button {
+      padding: 9px 14px;
+      border: 0;
+      border-radius: 9px;
+      color: #062015;
+      background: #86efac;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    button:hover { background: #bbf7d0; }
+    button:focus-visible { outline: 3px solid white; outline-offset: 3px; }
+
+    .board-wrap {
+      position: relative;
+      overflow: hidden;
+      border: 2px solid #285342;
+      border-radius: 16px;
+      background: #0a1b14;
+      box-shadow: 0 18px 60px #0006;
+      touch-action: none;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+
+    .message {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-content: center;
+      gap: 8px;
+      padding: 20px;
+      background: #06130fc9;
+      backdrop-filter: blur(3px);
+    }
+
+    .message[hidden] { display: none; }
+
+    .message strong { font-size: 1.8rem; }
+    .message span { color: #b8d5c4; }
+
+    .help {
+      margin: 14px 0 0;
+      color: #9bb9aa;
+      font-size: .92rem;
+      line-height: 1.6;
+    }
+
+    .mobile-controls {
+      display: grid;
+      grid-template-columns: repeat(3, 54px);
+      grid-template-rows: repeat(2, 46px);
+      justify-content: center;
+      gap: 6px;
+      margin-top: 14px;
+    }
+
+    .mobile-controls button {
+      color: #ecfdf5;
+      background: #174a36;
+      border: 1px solid #347558;
+      font-size: 1.2rem;
+      touch-action: manipulation;
+    }
+
+    .mobile-controls button:active { background: #23734e; }
+    .up { grid-column: 2; }
+    .left { grid-column: 1; grid-row: 2; }
+    .down { grid-column: 2; grid-row: 2; }
+    .right { grid-column: 3; grid-row: 2; }
+  </style>
+</head>
+<body>
+  <main class="game">
+    <h1>Змейка</h1>
+    <p class="subtitle">Собирай яблоки, не кусай себя 🍏</p>
+
+    <div class="panel">
+      <div class="score">Счёт: <span id="score">0</span></div>
+      <button id="startButton" type="button">Начать</button>
+    </div>
+
+    <div class="board-wrap" id="boardWrap">
+      <canvas id="board" width="400" height="400" aria-label="Игровое поле змейки"></canvas>
+      <div class="message" id="message">
+        <strong id="messageTitle">Готов играть?</strong>
+        <span id="messageText">Нажми «Начать» или любую стрелку</span>
+      </div>
+    </div>
+
+    <div class="mobile-controls" aria-label="Кнопки управления">
+      <button class="up" data-dir="up" aria-label="Вверх">▲</button>
+      <button class="left" data-dir="left" aria-label="Влево">◀</button>
+      <button class="down" data-dir="down" aria-label="Вниз">▼</button>
+      <button class="right" data-dir="right" aria-label="Вправо">▶</button>
+    </div>
+
+    <p class="help">Управление: стрелки или WASD · Пробел — пауза<br>На телефоне — кнопки или свайп</p>
+  </main>
+
+  <script>
+    const canvas = document.querySelector("#board");
+    const ctx = canvas.getContext("2d");
+    const scoreLabel = document.querySelector("#score");
+    const startButton = document.querySelector("#startButton");
+    const message = document.querySelector("#message");
+    const messageTitle = document.querySelector("#messageTitle");
+    const messageText = document.querySelector("#messageText");
+    const boardWrap = document.querySelector("#boardWrap");
+
+    const cell = 20;
+    const cells = canvas.width / cell;
+
+    let snake, food, direction, nextDirection, score;
+    let timer = null;
+    let running = false;
+    let paused = false;
+
+    function resetGame() {
+      snake = [
+        { x: 10, y: 10 },
+        { x: 9, y: 10 },
+        { x: 8, y: 10 }
+      ];
+      direction = { x: 1, y: 0 };
+      nextDirection = { ...direction };
+      score = 0;
+      scoreLabel.textContent = score;
+      placeFood();
+      draw();
+    }
+
+    function placeFood() {
+      do {
+        food = {
+          x: Math.floor(Math.random() * cells),
+          y: Math.floor(Math.random() * cells)
+        };
+      } while (snake.some(part => part.x === food.x && part.y === food.y));
+    }
+
+    function draw() {
+      ctx.fillStyle = "#0a1b14";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Ненавязчивая сетка
+      ctx.strokeStyle = "#ffffff09";
+      ctx.lineWidth = 1;
+      for (let i = 0; i <= cells; i++) {
+        ctx.beginPath();
+        ctx.moveTo(i * cell, 0);
+        ctx.lineTo(i * cell, canvas.height);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(0, i * cell);
+        ctx.lineTo(canvas.width, i * cell);
+        ctx.stroke();
+      }
+
+      // Яблоко
+      ctx.font = `${cell - 2}px serif`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("🍎", food.x * cell + cell / 2, food.y * cell + cell / 2 + 1);
+
+      // Змейка
+      snake.forEach((part, index) => {
+        ctx.fillStyle = index === 0 ? "#86efac" : "#34d399";
+        roundedRect(
+          part.x * cell + 2,
+          part.y * cell + 2,
+          cell - 4,
+          cell - 4,
+          index === 0 ? 7 : 5
+        );
+      });
+
+      // Глаза у головы
+      const head = snake[0];
+      ctx.fillStyle = "#064e3b";
+      const eyePositions = direction.x !== 0
+        ? [[head.x * cell + 13, head.y * cell + 7],
+           [head.x * cell + 13, head.y * cell + 13]]
+        : [[head.x * cell + 7, head.y * cell + 13],
+           [head.x * cell + 13, head.y * cell + 13]];
+
+      eyePositions.forEach(([x, y]) => {
+        ctx.beginPath();
+        ctx.arc(x, y, 1.5, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    }
+
+    function roundedRect(x, y, width, height, radius) {
+      ctx.beginPath();
+      ctx.roundRect(x, y, width, height, radius);
+      ctx.fill();
+    }
+
+    function step() {
+      direction = nextDirection;
+      const head = {
+        x: snake[0].x + direction.x,
+        y: snake[0].y + direction.y
+      };
+
+      const ateFood = head.x === food.x && head.y === food.y;
+      const bodyToCheck = ateFood ? snake : snake.slice(0, -1);
+
+      if (
+        head.x < 0 || head.x >= cells ||
+        head.y < 0 || head.y >= cells ||
+        bodyToCheck.some(part => part.x === head.x && part.y === head.y)
+      ) {
+        endGame();
+        return;
+      }
+
+      snake.unshift(head);
+
+      if (ateFood) {
+        score += 1;
+        scoreLabel.textContent = score;
+        placeFood();
+      } else {
+        snake.pop();
+      }
+
+      draw();
+    }
+
+    function startGame() {
+      if (running && paused) {
+        paused = false;
+        message.hidden = true;
+        startButton.textContent = "Пауза";
+        timer = setInterval(step, Math.max(65, 135 - score * 2));
+        return;
+      }
+
+      clearInterval(timer);
+      resetGame();
+      running = true;
+      paused = false;
+      message.hidden = true;
+      startButton.textContent = "Пауза";
+      timer = setInterval(step, 135);
+    }
+
+    function endGame() {
+      clearInterval(timer);
+      running = false;
+      paused = false;
+      messageTitle.textContent = "Игра окончена";
+      messageText.textContent = `Твой счёт: ${score}. Нажми «Заново», чтобы сыграть ещё.`;
+      message.hidden = false;
+      startButton.textContent = "Заново";
+    }
+
+    function togglePause() {
+      if (!running) return;
+
+      if (paused) {
+        startGame();
+      } else {
+        clearInterval(timer);
+        paused = true;
+        messageTitle.textContent = "Пауза";
+        messageText.textContent = "Нажми пробел или кнопку, чтобы продолжить";
+        message.hidden = false;
+        startButton.textContent = "Продолжить";
+      }
+    }
+
+    function setDirection(name) {
+      const directions = {
+        up: { x: 0, y: -1 },
+        down: { x: 0, y: 1 },
+        left: { x: -1, y: 0 },
+        right: { x: 1, y: 0 }
+      };
+
+      const chosen = directions[name];
+      if (!chosen) return;
+
+      // Нельзя развернуться прямо в собственное тело
+      if (chosen.x + direction.x === 0 && chosen.y + direction.y === 0) return;
+
+      if (!running) startGame();
+      nextDirection = chosen;
+    }
+
+    document.addEventListener("keydown", event => {
+      const keys = {
+        ArrowUp: "up", w: "up", W: "up",
+        ArrowDown: "down", s: "down", S: "down",
+        ArrowLeft: "left", a: "left", A: "left",
+        ArrowRight: "right", d: "right", D: "right"
+      };
+
+      if (keys[event.key]) {
+        event.preventDefault();
+        setDirection(keys[event.key]);
+      } else if (event.code === "Space") {
+        event.preventDefault();
+        togglePause();
+      }
+    });
+
+    startButton.addEventListener("click", () => {
+      if (running && !paused) togglePause();
+      else startGame();
+    });
+
+    document.querySelectorAll("[data-dir]").forEach(button => {
+      button.addEventListener("click", () => setDirection(button.dataset.dir));
+    });
+
+    // Свайпы для сенсорных экранов
+    let touchStart = null;
+
+    boardWrap.addEventListener("pointerdown", event => {
+      touchStart = { x: event.clientX, y: event.clientY };
+    });
+
+    boardWrap.addEventListener("pointerup", event => {
+      if (!touchStart) return;
+      const dx = event.clientX - touchStart.x;
+      const dy = event.clientY - touchStart.y;
+
+      if (Math.max(Math.abs(dx), Math.abs(dy)) > 20) {
+        if (Math.abs(dx) > Math.abs(dy)) {
+          setDirection(dx > 0 ? "right" : "left");
+        } else {
+          setDirection(dy > 0 ? "down" : "up");
+        }
+      }
+
+      touchStart = null;
+    });
+
+    resetGame();
+  </script>
+</body>
+</html>
