@@ -27,24 +27,18 @@
       color: var(--text);
       font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
       background:
-        radial-gradient(circle at 12% 18%, rgba(95, 165, 105, 0.17) 0 2px, transparent 3px),
-        radial-gradient(circle at 82% 28%, rgba(166, 223, 161, 0.13) 0 2px, transparent 3px),
-        radial-gradient(circle at 74% 82%, rgba(95, 165, 105, 0.15) 0 3px, transparent 4px),
         radial-gradient(ellipse at 15% 10%, #234735 0, transparent 36%),
         radial-gradient(ellipse at 90% 90%, #183d2d 0, transparent 42%),
         var(--background);
-      background-size: 120px 120px, 170px 170px, 210px 210px, auto, auto, auto;
     }
 
     .game {
-      width: min(100%, 490px);
+      width: min(100%, 760px);
       padding: 28px;
       border: 1px solid rgba(193, 235, 190, 0.12);
       border-radius: 30px;
       background: linear-gradient(155deg, rgba(31, 66, 49, 0.97), rgba(20, 48, 37, 0.98));
-      box-shadow:
-        0 28px 80px rgba(0, 0, 0, 0.32),
-        inset 0 1px rgba(255, 255, 255, 0.06);
+      box-shadow: 0 28px 80px rgba(0, 0, 0, 0.32);
     }
 
     .topline {
@@ -76,7 +70,6 @@
       margin: 0;
       font-size: 30px;
       line-height: 1.1;
-      letter-spacing: -1px;
     }
 
     .subtitle {
@@ -108,7 +101,6 @@
       border: 1px solid rgba(192, 228, 186, 0.1);
       border-radius: 16px;
       background: rgba(10, 31, 23, 0.27);
-      text-align: left;
     }
 
     .stat-label {
@@ -122,7 +114,13 @@
       color: var(--mint);
       font-size: 21px;
       font-weight: 750;
-      line-height: 1;
+    }
+
+    .play-area {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 190px;
+      align-items: center;
+      gap: 18px;
     }
 
     canvas {
@@ -132,9 +130,43 @@
       border: 1px solid rgba(187, 235, 176, 0.18);
       border-radius: 20px;
       background: #183a2b;
-      box-shadow:
-        inset 0 0 35px rgba(5, 20, 13, 0.25),
-        0 12px 30px rgba(0, 0, 0, 0.14);
+    }
+
+    .character-card {
+      min-height: 230px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid rgba(135, 190, 230, 0.18);
+      border-radius: 20px;
+      background:
+        radial-gradient(ellipse at 50% 50%, rgba(57, 122, 173, 0.19), transparent 68%),
+        rgba(10, 31, 35, 0.35);
+      text-align: center;
+    }
+
+    #baraCanvas {
+      width: 100%;
+      max-width: 160px;
+      height: auto;
+      border: 0;
+      border-radius: 0;
+      background: transparent;
+    }
+
+    .character-name {
+      margin: 8px 0 0;
+      color: #c6e9ff;
+      font-size: 16px;
+      font-weight: 800;
+    }
+
+    .character-caption {
+      margin: 3px 0 0;
+      color: var(--muted);
+      font-size: 11px;
     }
 
     .message {
@@ -154,17 +186,10 @@
       font: inherit;
       font-weight: 800;
       cursor: pointer;
-      box-shadow: 0 7px 18px rgba(72, 173, 98, 0.18);
-      transition: transform 160ms ease, filter 160ms ease;
     }
 
     .start-button:hover {
       filter: brightness(1.07);
-      transform: translateY(-1px);
-    }
-
-    .start-button:active {
-      transform: translateY(1px);
     }
 
     .bottom-info {
@@ -180,7 +205,7 @@
     .keys {
       display: flex;
       align-items: center;
-      gap: 4px;
+      gap: 5px;
     }
 
     kbd {
@@ -195,12 +220,25 @@
       text-align: center;
     }
 
-    @media (max-width: 420px) {
+    @media (max-width: 600px) {
       .game {
         padding: 20px;
-        border-radius: 24px;
       }
 
+      .play-area {
+        grid-template-columns: 1fr;
+      }
+
+      .character-card {
+        min-height: 180px;
+      }
+
+      #baraCanvas {
+        max-width: 125px;
+      }
+    }
+
+    @media (max-width: 420px) {
       h1 {
         font-size: 26px;
       }
@@ -227,7 +265,6 @@
           <p class="subtitle">Собирай яблоки в лесу</p>
         </div>
       </div>
-
       <div class="badge">ЛЕСНОЙ РЕЖИМ</div>
     </header>
 
@@ -236,18 +273,24 @@
         <span class="stat-label">Текущий счёт</span>
         <span class="stat-value" id="score">0</span>
       </div>
-
       <div class="stat">
         <span class="stat-label">Лучший результат</span>
         <span class="stat-value" id="bestScore">0</span>
       </div>
     </section>
 
-    <canvas id="board" width="420" height="420"></canvas>
+    <div class="play-area">
+      <canvas id="board" width="420" height="420" aria-label="Игровое поле"></canvas>
+
+      <aside class="character-card" aria-label="Персонаж Баратрум">
+        <canvas id="baraCanvas" width="180" height="210"></canvas>
+        <p class="character-name">Баратрум</p>
+        <p class="character-caption">Дух из далёких миров</p>
+      </aside>
+    </div>
 
     <p class="message" id="message">Нажми кнопку или WASD, чтобы начать</p>
-
-    <button class="start-button" id="startButton">Начать игру</button>
+    <button class="start-button" id="startButton" type="button">Начать игру</button>
 
     <div class="bottom-info">
       <span>Управление</span>
@@ -263,6 +306,9 @@
   <script>
     const canvas = document.getElementById("board");
     const ctx = canvas.getContext("2d");
+    const baraCanvas = document.getElementById("baraCanvas");
+    const baraCtx = baraCanvas.getContext("2d");
+
     const scoreElement = document.getElementById("score");
     const bestScoreElement = document.getElementById("bestScore");
     const messageElement = document.getElementById("message");
@@ -278,133 +324,35 @@
       KeyD: { x: 1, y: 0 }
     };
 
-    let snake;
-    let headTrail = [];
-    let previousHead;
-    let food;
-    let direction;
-    let nextDirection;
+    let snake = [
+      { x: 10, y: 10 },
+      { x: 9, y: 10 },
+      { x: 8, y: 10 }
+    ];
+
+    let food = { x: 14, y: 10 };
+    let direction = { x: 1, y: 0 };
+    let nextDirection = { x: 1, y: 0 };
     let score = 0;
-    let bestScore = Number(localStorage.getItem("snakeBestScore")) || 0;
+    let bestScore = 0;
     let state = "ready";
-    let lastStep = null;
-    let stepDuration = 125;
+    let timer = null;
+
+    try {
+      bestScore = Number(localStorage.getItem("snakeBestScore")) || 0;
+    } catch {
+      bestScore = 0;
+    }
 
     bestScoreElement.textContent = bestScore;
 
-    function startGame() {
-      snake = [
-        { x: 10, y: 10 },
-        { x: 9, y: 10 },
-        { x: 8, y: 10 }
-      ];
-
-      headTrail = snake.map(part => ({ ...part }));
-      previousHead = { ...snake[0] };
-      direction = directions.KeyD;
-      nextDirection = directions.KeyD;
-      score = 0;
-      stepDuration = 125;
-      lastStep = null;
-      state = "playing";
-
-      scoreElement.textContent = score;
-      messageElement.textContent = "";
-      startButton.textContent = "Начать заново";
-
-      placeFood();
-      draw(1);
-    }
-
-    function placeFood() {
-      do {
-        food = {
-          x: Math.floor(Math.random() * cells),
-          y: Math.floor(Math.random() * cells)
-        };
-      } while (snake.some(part => part.x === food.x && part.y === food.y));
-    }
-
-    function changeDirection(keyCode) {
-      const newDirection = directions[keyCode];
-
-      if (!newDirection) return;
-
-      const isOpposite =
-        newDirection.x + direction.x === 0 &&
-        newDirection.y + direction.y === 0;
-
-      if (!isOpposite) {
-        nextDirection = newDirection;
-      }
-    }
-
-    function finishGame(message) {
-      state = "over";
-      messageElement.textContent = message;
-      startButton.textContent = "Играть ещё";
-    }
-
-    function update() {
-      direction = nextDirection;
-      previousHead = { ...snake[0] };
-
-      const head = {
-        x: snake[0].x + direction.x,
-        y: snake[0].y + direction.y
-      };
-
-      const ateFood = head.x === food.x && head.y === food.y;
-      const hitWall =
-        head.x < 0 ||
-        head.x >= cells ||
-        head.y < 0 ||
-        head.y >= cells;
-
-      // Хвост освобождает клетку на этом ходу, если змейка не ест.
-      const bodyToCheck = ateFood ? snake : snake.slice(0, -1);
-      const hitSelf = bodyToCheck.some(
-        part => part.x === head.x && part.y === head.y
-      );
-
-      if (hitWall || hitSelf) {
-        finishGame(`Игра окончена! Счёт: ${score}`);
-        return;
-      }
-
-      snake.unshift(head);
-
-      if (!ateFood) {
-        snake.pop();
-      } else {
-        score += 1;
-        scoreElement.textContent = score;
-
-        if (score > bestScore) {
-          bestScore = score;
-          bestScoreElement.textContent = bestScore;
-          localStorage.setItem("snakeBestScore", String(bestScore));
-        }
-
-        stepDuration = Math.max(90, 125 - score * 1.5);
-
-        if (snake.length === cells * cells) {
-          finishGame("Победа! Всё поле собрано!");
-        } else {
-          placeFood();
-        }
-      }
-
-      // След головы нужен для плавного движения частей тела.
-      headTrail.unshift({ ...head });
-    }
-
-    function draw(progress = 1) {
+    function draw() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.fillStyle = "#183a2b";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      ctx.strokeStyle = "rgba(183, 226, 170, 0.055)";
+      // Сетка поля.
+      ctx.strokeStyle = "rgba(183, 226, 170, 0.07)";
       ctx.lineWidth = 1;
 
       for (let i = 1; i < cells; i++) {
@@ -419,182 +367,267 @@
       }
 
       // Яблоко.
-      const foodX = (food.x + 0.5) * cellSize;
-      const foodY = (food.y + 0.5) * cellSize;
-
-      ctx.save();
-      ctx.translate(foodX, foodY);
-      ctx.scale(cellSize, cellSize);
-
-      ctx.fillStyle = "rgba(242, 163, 126, 0.12)";
-      ctx.beginPath();
-      ctx.arc(0, 0, 0.46, 0, Math.PI * 2);
-      ctx.fill();
+      const appleX = (food.x + 0.5) * cellSize;
+      const appleY = (food.y + 0.5) * cellSize;
 
       ctx.fillStyle = "#f08069";
       ctx.beginPath();
-      ctx.moveTo(0, -0.12);
-      ctx.bezierCurveTo(-0.12, -0.25, -0.39, -0.23, -0.39, 0.02);
-      ctx.bezierCurveTo(-0.39, 0.24, -0.20, 0.39, -0.06, 0.36);
-      ctx.bezierCurveTo(-0.02, 0.35, 0.02, 0.35, 0.06, 0.36);
-      ctx.bezierCurveTo(0.20, 0.39, 0.39, 0.24, 0.39, 0.02);
-      ctx.bezierCurveTo(0.39, -0.23, 0.12, -0.25, 0, -0.12);
-      ctx.closePath();
-      ctx.fill();
-
-      ctx.fillStyle = "rgba(255, 224, 190, 0.55)";
-      ctx.beginPath();
-      ctx.ellipse(-0.17, 0.02, 0.055, 0.12, -0.35, 0, Math.PI * 2);
+      ctx.arc(appleX, appleY, cellSize * 0.34, 0, Math.PI * 2);
       ctx.fill();
 
       ctx.strokeStyle = "#76533a";
-      ctx.lineWidth = 0.045;
-      ctx.lineCap = "round";
+      ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.moveTo(0, -0.20);
-      ctx.quadraticCurveTo(0.02, -0.31, 0.08, -0.34);
+      ctx.moveTo(appleX, appleY - cellSize * 0.25);
+      ctx.lineTo(appleX + 2, appleY - cellSize * 0.43);
       ctx.stroke();
 
-      ctx.fillStyle = "#8bc878";
-      ctx.beginPath();
-      ctx.moveTo(0.025, -0.27);
-      ctx.quadraticCurveTo(0.16, -0.39, 0.22, -0.29);
-      ctx.quadraticCurveTo(0.15, -0.20, 0.025, -0.27);
-      ctx.fill();
+      // Змейка.
+      snake.forEach((part, index) => {
+        const inset = index === 0 ? 1.5 : 2.5;
+        const x = part.x * cellSize + inset;
+        const y = part.y * cellSize + inset;
+        const size = cellSize - inset * 2;
 
-      ctx.restore();
+        ctx.fillStyle = index === 0 ? "#a5e6b1" : "#72c888";
+        ctx.beginPath();
+        ctx.roundRect(x, y, size, size, cellSize * 0.25);
+        ctx.fill();
+      });
 
-      // Плавно перемещаем голову между клетками.
-      const eased = progress * progress * (3 - 2 * progress);
-      const currentHead = snake[0];
-      const fromHead = previousHead || currentHead;
+      // Глаза на голове.
+      const head = snake[0];
+      const centerX = (head.x + 0.5) * cellSize;
+      const centerY = (head.y + 0.5) * cellSize;
 
-      const movingHead = {
-        x: fromHead.x + (currentHead.x - fromHead.x) * eased,
-        y: fromHead.y + (currentHead.y - fromHead.y) * eased
-      };
-
-      const trail = [movingHead, ...headTrail.slice(1)].map(point => ({
-        x: (point.x + 0.5) * cellSize,
-        y: (point.y + 0.5) * cellSize
-      }));
-
-      function pointAtDistance(distance) {
-        if (distance <= 0 || trail.length === 1) {
-          return trail[0];
-        }
-
-        let travelled = 0;
-
-        for (let i = 0; i < trail.length - 1; i++) {
-          const start = trail[i];
-          const end = trail[i + 1];
-          const dx = end.x - start.x;
-          const dy = end.y - start.y;
-          const length = Math.hypot(dx, dy);
-
-          if (length === 0) continue;
-
-          if (travelled + length >= distance) {
-            const part = (distance - travelled) / length;
-
-            return {
-              x: start.x + dx * part,
-              y: start.y + dy * part
-            };
-          }
-
-          travelled += length;
-        }
-
-        return trail[trail.length - 1];
-      }
-
-      const points = snake.map((_, index) =>
-        pointAtDistance(index * cellSize)
-      );
-
-      if (points.length === 0) return;
-
-      // Рисуем тело плавной линией.
-      const bodyPath = new Path2D();
-      bodyPath.moveTo(points[0].x, points[0].y);
-
-      for (let i = 1; i < points.length - 1; i++) {
-        const midpointX = (points[i].x + points[i + 1].x) / 2;
-        const midpointY = (points[i].y + points[i + 1].y) / 2;
-
-        bodyPath.quadraticCurveTo(
-          points[i].x,
-          points[i].y,
-          midpointX,
-          midpointY
-        );
-      }
-
-      if (points.length > 1) {
-        const tail = points[points.length - 1];
-        bodyPath.lineTo(tail.x, tail.y);
-      }
-
-      ctx.lineCap = "round";
-      ctx.lineJoin = "round";
-
-      ctx.strokeStyle = "#4b9961";
-      ctx.lineWidth = cellSize * 0.88;
-      ctx.stroke(bodyPath);
-
-      ctx.strokeStyle = "#72c888";
-      ctx.lineWidth = cellSize * 0.76;
-      ctx.stroke(bodyPath);
-
-      // Глаза змейки.
-      const headPoint = points[0];
-      const eyeOffset = cellSize * 0.15;
       ctx.fillStyle = "#24543a";
 
       if (direction.x !== 0) {
-        const eyeX = headPoint.x + direction.x * cellSize * 0.1;
-
+        const eyeX = centerX + direction.x * cellSize * 0.15;
         ctx.beginPath();
-        ctx.arc(eyeX, headPoint.y - eyeOffset, 1.8, 0, Math.PI * 2);
-        ctx.arc(eyeX, headPoint.y + eyeOffset, 1.8, 0, Math.PI * 2);
+        ctx.arc(eyeX, centerY - cellSize * 0.16, 1.8, 0, Math.PI * 2);
+        ctx.arc(eyeX, centerY + cellSize * 0.16, 1.8, 0, Math.PI * 2);
         ctx.fill();
       } else {
-        const eyeY = headPoint.y + direction.y * cellSize * 0.1;
-
+        const eyeY = centerY + direction.y * cellSize * 0.15;
         ctx.beginPath();
-        ctx.arc(headPoint.x - eyeOffset, eyeY, 1.8, 0, Math.PI * 2);
-        ctx.arc(headPoint.x + eyeOffset, eyeY, 1.8, 0, Math.PI * 2);
+        ctx.arc(centerX - cellSize * 0.16, eyeY, 1.8, 0, Math.PI * 2);
+        ctx.arc(centerX + cellSize * 0.16, eyeY, 1.8, 0, Math.PI * 2);
         ctx.fill();
       }
     }
 
-    function gameLoop(timestamp) {
-      if (state === "playing") {
-        if (lastStep === null) {
-          lastStep = timestamp;
-        }
+    function drawBara() {
+      const c = baraCtx;
+      const w = baraCanvas.width;
+      const h = baraCanvas.height;
 
-        if (timestamp - lastStep >= stepDuration) {
-          update();
-          lastStep = timestamp;
-        }
+      c.clearRect(0, 0, w, h);
 
-        const progress = state === "playing"
-          ? Math.min((timestamp - lastStep) / stepDuration, 1)
-          : 1;
+      // Мягкое сияние за персонажем.
+      const glow = c.createRadialGradient(90, 105, 8, 90, 105, 88);
+      glow.addColorStop(0, "rgba(91, 183, 255, 0.32)");
+      glow.addColorStop(1, "rgba(30, 70, 120, 0)");
+      c.fillStyle = glow;
+      c.fillRect(0, 0, w, h);
 
-        draw(progress);
-      } else {
-        draw(1);
+      // Тело и плечи.
+      c.fillStyle = "#315b87";
+      c.beginPath();
+      c.ellipse(90, 157, 48, 39, 0, 0, Math.PI * 2);
+      c.fill();
+
+      c.fillStyle = "#477aa7";
+      c.beginPath();
+      c.moveTo(48, 145);
+      c.quadraticCurveTo(43, 110, 60, 88);
+      c.lineTo(120, 88);
+      c.quadraticCurveTo(139, 111, 132, 145);
+      c.quadraticCurveTo(112, 162, 90, 160);
+      c.quadraticCurveTo(65, 162, 48, 145);
+      c.fill();
+
+      // Рога.
+      c.fillStyle = "#d1d7d0";
+      c.beginPath();
+      c.moveTo(61, 82);
+      c.quadraticCurveTo(38, 62, 28, 25);
+      c.quadraticCurveTo(62, 45, 76, 69);
+      c.closePath();
+      c.fill();
+
+      c.beginPath();
+      c.moveTo(119, 82);
+      c.quadraticCurveTo(142, 62, 152, 25);
+      c.quadraticCurveTo(118, 45, 104, 69);
+      c.closePath();
+      c.fill();
+
+      // Тёмная морда.
+      c.fillStyle = "#26384b";
+      c.beginPath();
+      c.moveTo(57, 79);
+      c.quadraticCurveTo(90, 56, 123, 79);
+      c.lineTo(116, 122);
+      c.quadraticCurveTo(108, 143, 90, 148);
+      c.quadraticCurveTo(72, 143, 64, 122);
+      c.closePath();
+      c.fill();
+
+      // Брови.
+      c.strokeStyle = "#b5d8ee";
+      c.lineWidth = 6;
+      c.lineCap = "round";
+      c.beginPath();
+      c.moveTo(63, 87);
+      c.lineTo(82, 94);
+      c.moveTo(117, 87);
+      c.lineTo(98, 94);
+      c.stroke();
+
+      // Глаза.
+      c.fillStyle = "#ffcf69";
+      c.beginPath();
+      c.ellipse(75, 101, 7, 5, 0, 0, Math.PI * 2);
+      c.ellipse(105, 101, 7, 5, 0, 0, Math.PI * 2);
+      c.fill();
+
+      c.fillStyle = "#17242e";
+      c.beginPath();
+      c.arc(77, 101, 2.2, 0, Math.PI * 2);
+      c.arc(103, 101, 2.2, 0, Math.PI * 2);
+      c.fill();
+
+      // Нос и кольцо.
+      c.fillStyle = "#17242e";
+      c.beginPath();
+      c.moveTo(84, 111);
+      c.lineTo(96, 111);
+      c.lineTo(90, 119);
+      c.closePath();
+      c.fill();
+
+      c.strokeStyle = "#d7bd78";
+      c.lineWidth = 3;
+      c.beginPath();
+      c.arc(90, 123, 7, 0.1, Math.PI - 0.1);
+      c.stroke();
+
+      // Декоративный нагрудник.
+      c.fillStyle = "#b59656";
+      c.beginPath();
+      c.moveTo(75, 151);
+      c.lineTo(90, 166);
+      c.lineTo(105, 151);
+      c.lineTo(101, 180);
+      c.lineTo(90, 187);
+      c.lineTo(79, 180);
+      c.closePath();
+      c.fill();
+
+      c.fillStyle = "#e0c47c";
+      c.beginPath();
+      c.arc(90, 164, 5, 0, Math.PI * 2);
+      c.fill();
+    }
+
+    function placeFood() {
+      do {
+        food = {
+          x: Math.floor(Math.random() * cells),
+          y: Math.floor(Math.random() * cells)
+        };
+      } while (snake.some(part => part.x === food.x && part.y === food.y));
+    }
+
+    function finishGame(text) {
+      clearInterval(timer);
+      timer = null;
+      state = "over";
+      messageElement.textContent = text;
+      startButton.textContent = "Играть ещё";
+      draw();
+    }
+
+    function update() {
+      direction = nextDirection;
+
+      // Выход за край переносит голову на противоположную сторону.
+      const head = {
+        x: (snake[0].x + direction.x + cells) % cells,
+        y: (snake[0].y + direction.y + cells) % cells
+      };
+
+      const ateFood = head.x === food.x && head.y === food.y;
+
+      // Если змейка не ест, хвост уходит с клетки в этот же ход.
+      const bodyToCheck = ateFood ? snake : snake.slice(0, -1);
+      const hitSelf = bodyToCheck.some(
+        part => part.x === head.x && part.y === head.y
+      );
+
+      if (hitSelf) {
+        finishGame(`Игра окончена! Счёт: ${score}`);
+        return;
       }
 
-      requestAnimationFrame(gameLoop);
+      snake.unshift(head);
+
+      if (ateFood) {
+        score += 1;
+        scoreElement.textContent = score;
+
+        if (score > bestScore) {
+          bestScore = score;
+          bestScoreElement.textContent = bestScore;
+
+          try {
+            localStorage.setItem("snakeBestScore", String(bestScore));
+          } catch {
+            // Игра продолжится, если браузер запрещает localStorage.
+          }
+        }
+
+        if (snake.length === cells * cells) {
+          finishGame("Победа! Всё поле собрано!");
+          return;
+        }
+
+        placeFood();
+      } else {
+        snake.pop();
+      }
+
+      draw();
+    }
+
+    function startGame() {
+      clearInterval(timer);
+
+      snake = [
+        { x: 10, y: 10 },
+        { x: 9, y: 10 },
+        { x: 8, y: 10 }
+      ];
+
+      direction = { x: 1, y: 0 };
+      nextDirection = { x: 1, y: 0 };
+      score = 0;
+      scoreElement.textContent = score;
+      messageElement.textContent = "";
+      startButton.textContent = "Начать заново";
+      state = "playing";
+
+      placeFood();
+      draw();
+
+      timer = setInterval(update, 125);
     }
 
     document.addEventListener("keydown", event => {
-      if (!directions[event.code]) return;
+      const newDirection = directions[event.code];
+
+      if (!newDirection) return;
 
       event.preventDefault();
 
@@ -602,27 +635,20 @@
         startGame();
       }
 
-      if (state === "playing") {
-        changeDirection(event.code);
+      const isOpposite =
+        newDirection.x + direction.x === 0 &&
+        newDirection.y + direction.y === 0;
+
+      if (state === "playing" && !isOpposite) {
+        nextDirection = newDirection;
       }
     });
 
     startButton.addEventListener("click", startGame);
 
-    snake = [
-      { x: 10, y: 10 },
-      { x: 9, y: 10 },
-      { x: 8, y: 10 }
-    ];
-
-    headTrail = snake.map(part => ({ ...part }));
-    previousHead = { ...snake[0] };
-    direction = directions.KeyD;
-    nextDirection = directions.KeyD;
-    food = { x: 14, y: 10 };
-
-    draw(1);
-    requestAnimationFrame(gameLoop);
+    // Показываем поле и персонажа сразу при загрузке страницы.
+    draw();
+    drawBara();
   </script>
 </body>
 </html>
