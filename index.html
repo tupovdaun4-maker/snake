@@ -331,6 +331,35 @@
     ];
 
     let food = { x: 14, y: 10 };
+    let bonusFood = null; // { x, y, expiresAt, duration }
+    let obstacles = [];   // [{ x, y }, ...]
+    let portals = [];     // [{ x, y }, { x, y }] — всегда пара
+
+// Вспомогательная функция проверки, занята ли клетка
+function isCellOccupied(x, y) {
+  return (
+    snake.some(part => part.x === x && part.y === y) ||
+    (food && food.x === x && food.y === y) ||
+    (bonusFood && bonusFood.x === x && bonusFood.y === y) ||
+    obstacles.some(obs => obs.x === x && obs.y === y) ||
+    portals.some(p => p.x === x && p.y === y)
+  );
+}
+
+// Универсальный поиск свободной клетки
+function getFreeCell() {
+  let cell;
+  let attempts = 0;
+  do {
+    cell = {
+      x: Math.floor(Math.random() * cells),
+      y: Math.floor(Math.random() * cells)
+    };
+    attempts++;
+  } while (isCellOccupied(cell.x, cell.y) && attempts < 200);
+  return cell;
+}
+
     let direction = { x: 1, y: 0 };
     let nextDirection = { x: 1, y: 0 };
     let score = 0;
@@ -426,7 +455,55 @@ function draw(progress = 1) {
   ctx.moveTo(appleX, appleY - cellSize * 0.25);
   ctx.lineTo(appleX + 2, appleY - cellSize * 0.43);
   ctx.stroke();
+    // 2.1. Каменные препятствия
+  for (const obs of obstacles) {
+    const ox = obs.x * cellSize + 2;
+    const oy = obs.y * cellSize + 2;
+    const size = cellSize - 4;
+    ctx.fillStyle = "#4b6258";
+    ctx.beginPath();
+    ctx.roundRect(ox, oy, size, size, 4);
+    ctx.fill();
 
+    ctx.strokeStyle = "#7a998b";
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+
+  // 2.2. Парные порталы (синий и фиолетовый вихри)
+  const portalColors = ["#4cc9f0", "#b5179e"];
+  portals.forEach((p, idx) => {
+    const px = (p.x + 0.5) * cellSize;
+    const py = (p.y + 0.5) * cellSize;
+    ctx.strokeStyle = portalColors[idx];
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.arc(px, py, cellSize * 0.36, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.fillStyle = portalColors[idx] + "33"; // Полупрозрачный центр
+    ctx.fill();
+  });
+
+  // 2.3. Золотое яблоко с кольцом-таймером
+  if (bonusFood) {
+    const bx = (bonusFood.x + 0.5) * cellSize;
+    const by = (bonusFood.y + 0.5) * cellSize;
+    const remainingRatio = Math.max(0, (bonusFood.expiresAt - performance.now()) / bonusFood.duration);
+
+    // Кольцо времени вокруг плода
+    ctx.strokeStyle = "#ffd166";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(bx, by, cellSize * 0.44, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * remainingRatio);
+    ctx.stroke();
+
+    // Сам золотой плод
+    ctx.fillStyle = "#ffbe0b";
+    ctx.beginPath();
+    ctx.arc(bx, by, cellSize * 0.32, 0, Math.PI * 2);
+    ctx.fill();
+  }
   // 3. Цельная змейка со скруглёнными поворотами.
   const points = getVisualPoints(progress);
   if (points.length === 0) return;
@@ -515,7 +592,7 @@ function draw(progress = 1) {
 
   c.clearRect(0, 0, w, h);
 
-  let breathY = Math.sin(t * 2.8) * 3.5;
+  let breathY = Math.sin(t * 2.8) * 8;
   let headBobY = Math.sin(t * 2.8 - 0.5) * 2.5;
   let shakeX = 0;
   let glowColor = "rgba(91, 183, 255, 0.34)";
@@ -670,13 +747,40 @@ function draw(progress = 1) {
 
 
     function placeFood() {
-      do {
-        food = {
-          x: Math.floor(Math.random() * cells),
-          y: Math.floor(Math.random() * cells)
-        };
-      } while (snake.some(part => part.x === food.x && part.y === food.y));
-    }
+  food = getFreeCell();
+}
+
+function spawnBonusFood() {
+  const pos = getFreeCell();
+  const duration = 7000; // 7 секунд на сбор
+  bonusFood = {
+    x: pos.x,
+    y: pos.y,
+    duration,
+    expiresAt: performance.now() + duration
+  };
+}
+
+function spawnObstacle() {
+  // Ставим камень не ближе 3 клеток от головы, чтобы не убить игрока внезапно
+  let pos;
+  let attempts = 0;
+  const head = snake.at(0);
+  do {
+    pos = getFreeCell();
+    attempts++;
+  } while (Math.hypot(pos.x - head.x, pos.y - head.y) < 3 && attempts < 50);
+  
+  obstacles.push(pos);
+}
+
+function spawnPortals() {
+  const p1 = getFreeCell();
+  portals = [p1]; // Временно добавляем первый, чтобы второй не совпал с ним
+  const p2 = getFreeCell();
+  portals = [p1, p2];
+}
+
 
     function finishGame(text) {
   setBaraMood("angry");
@@ -687,48 +791,68 @@ function draw(progress = 1) {
   startButton.textContent = "Играть ещё";
   draw(1);
 }
-
 function update() {
       prevSnake = snake.map(part => ({ ...part }));
-      direction = nextDirection;
+direction = nextDirection;
+let nextX = (snake.at(0).x + direction.x + cells) % cells;
+let nextY = (snake.at(0).y + direction.y + cells) % cells;
+// Проверка входа в портал
+if (portals.length === 2) {
+  if (nextX === portals[0].x && nextY === portals[0].y) {
+    nextX = portals[1].x;
+    nextY = portals[1].y;
+  } else if (nextX === portals[1].x && nextY === portals[1].y) {
+    nextX = portals[0].x;
+    nextY = portals[0].y;
+  }
+}
+const head = { x: nextX, y: nextY };
+const ateFood = head.x === food.x && head.y === food.y;
+const ateBonus = bonusFood && head.x === bonusFood.x && head.y === bonusFood.y;
+const bodyToCheck = (ateFood || ateBonus) ? snake : snake.slice(0, -1);
+const hitSelf = bodyToCheck.some(part => part.x === head.x && part.y === head.y);
+const hitObstacle = obstacles.some(obs => obs.x === head.x && obs.y === head.y);
+if (hitSelf || hitObstacle) {
+  finishGame(`Игра окончена! Счёт: ${score}`);
+  return false;
+}
+snake.unshift(head)
+if (ateFood || ateBonus) {
+  setBaraMood("charge", 800);
+  prevSnake.push({ ...prevSnake.at(-1) });
+  if (ateBonus) {
+    score += 3;
+    bonusFood = null;
+  } else {
+    score += 1;
+    placeFood();
+    // Каждые 4 очка: шанс создать золотое яблоко и новый камень
+    if (score % 4 === 0) {
+      if (!bonusFood) spawnBonusFood();
+      spawnObstacle();
+    }
+    // Каждые 8 очков: перемещаем порталы в новые места
+    if (score % 8 === 0) {
+      spawnPortals();
+    }
+  }
+  scoreElement.textContent = score;
+  if (score > bestScore) {
+    bestScore = score;
+    bestScoreElement.textContent = bestScore;
+    try {
+      localStorage.setItem("snakeBestScore", String(bestScore));
+    } catch {}
+  }
 
-      const head = {
-        x: (snake.at(0).x + direction.x + cells) % cells,
-        y: (snake.at(0).y + direction.y + cells) % cells
-      };
-
-      const ateFood = head.x === food.x && head.y === food.y;
-      const bodyToCheck = ateFood ? snake : snake.slice(0, -1);
-      const hitSelf = bodyToCheck.some(part => part.x === head.x && part.y === head.y);
-
-      if (hitSelf) {
-        finishGame(`Игра окончена! Счёт: ${score}`);
-        return false;
-      }
-
-      snake.unshift(head);
-
-      if (ateFood) {
-        setBaraMood("charge", 800);
-        prevSnake.push({ ...prevSnake.at(-1) });
-        score += 1;
-        scoreElement.textContent = score;
-        if (score > bestScore) {
-          bestScore = score;
-          bestScoreElement.textContent = bestScore;
-          try {
-            localStorage.setItem("snakeBestScore", String(bestScore));
-          } catch {}
-        }
-        if (snake.length === cells * cells) {
-          finishGame("Победа! Всё поле собрано!");
-          return false;
-        }
-        placeFood();
-      } else {
-        snake.pop();
-      }
-      return true;
+  if (snake.length + obstacles.length >= cells * cells) {
+    finishGame("Победа! Всё поле собрано!");
+    return false;
+  }
+} else {
+  snake.pop();
+}
+return true;
     }
 
     function gameLoop(timestamp) {
@@ -738,7 +862,9 @@ function update() {
       const delta = timestamp - lastFrameTime;
       lastFrameTime = timestamp;
       accumulator += delta;
-
+      if (bonusFood && timestamp >= bonusFood.expiresAt) {
+      bonusFood = null;
+}
       while (accumulator >= stepDuration) {
         accumulator -= stepDuration;
         if (!update()) return;
@@ -764,6 +890,9 @@ function update() {
       startButton.textContent = "Начать заново";
       state = "playing";
       setBaraMood("idle");
+      obstacles = [];
+      bonusFood = null;
+      spawnPortals(); // Порталы появляются с самого начала игры
       placeFood();
       update();
 
