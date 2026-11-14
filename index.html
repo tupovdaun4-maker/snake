@@ -342,56 +342,54 @@ previousHead = { ...snake[0] };
     }
 
     function update() {
-      direction = nextDirection;
-      previousHead = { ...snake[0] };
+  direction = nextDirection;
+  previousHead = { ...snake[0] };
 
-      // Запоминаем положение каждой части до шага.
-      const oldSnake = snake.map(part => ({ ...part }));
+  const head = {
+    x: snake[0].x + direction.x,
+    y: snake[0].y + direction.y
+  };
+  const ateFood = head.x === food.x && head.y === food.y;
+  const hitWall =
+    head.x < 0 || head.x >= cells ||
+    head.y < 0 || head.y >= cells;
 
-      const head = {
-        x: snake[0].x + direction.x,
-        y: snake[0].y + direction.y
-      };
+  // Хвост освобождает свою клетку на этом ходу, если змейка не ест.
+  const bodyToCheck = ateFood ? snake : snake.slice(0, -1);
+  const hitSelf = bodyToCheck.some(
+    part => part.x === head.x && part.y === head.y
+  );
 
-      const ateFood = head.x === food.x && head.y === food.y;
+  if (hitWall || hitSelf) {
+    finishGame(`Игра окончена! Счёт: ${score}`);
+    return;
+  }
 
-      const hitWall =
-        head.x < 0 || head.x >= cells ||
-        head.y < 0 || head.y >= cells;
+  snake.unshift(head);
 
-      const bodyToCheck = ateFood ? snake : snake.slice(0, -1);
-      const hitSelf = bodyToCheck.some(
-        part => part.x === head.x && part.y === head.y
-      );
+  if (!ateFood) {
+    snake.pop();
+  } else {
+    score += 1;
+    scoreElement.textContent = score;
 
-      if (hitWall || hitSelf) {
-        finishGame(`Игра окончена! Счёт: ${score}`);
-        return;
-      }
+    if (score > bestScore) {
+      bestScore = score;
+      bestScoreElement.textContent = bestScore;
+      localStorage.setItem("snakeBestScore", String(bestScore));
+    }
 
-      snake.unshift(head);
+    stepDuration = Math.max(90, 125 - score * 1.5);
 
-      if (!ateFood) {
-        snake.pop();
-      } else {
-        score += 1;
-        scoreElement.textContent = score;
+    if (snake.length === cells * cells) {
+      finishGame("Победа! Всё поле собрано!");
+    } else {
+      placeFood();
+    }
+  }
 
-        if (score > bestScore) {
-          bestScore = score;
-          bestScoreElement.textContent = bestScore;
-          localStorage.setItem("snakeBestScore", bestScore);
-        }
-
-        stepDuration = Math.max(90, 125 - score * 1.5);
-
-        if (snake.length === cells * cells) {
-          finishGame("Победа! Всё поле собрано!");
-        } else {
-          placeFood();
-        }
-      }
-
+  // След хранит пройденные позиции головы для плавного движения тела.
+  headTrail.unshift({ ...head });
       // Каждая часть начинается со своей позиции до шага.
       // Это сохраняет плавное движение и тела, и хвоста.
       if (headTrail.length > snake.length + 2) {
@@ -400,81 +398,174 @@ previousHead = { ...snake[0] };
       });
     }
 
-    function draw(progress = 1) {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = "#183a2b";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+   function draw(progress = 1) {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = "#183a2b";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      ctx.strokeStyle = "rgba(183, 226, 170, 0.055)";
-      ctx.lineWidth = 1;
+  ctx.strokeStyle = "rgba(183, 226, 170, 0.055)";
+  ctx.lineWidth = 1;
 
-      for (let i = 1; i < cells; i++) {
-        const position = i * cellSize;
+  for (let i = 1; i < cells; i++) {
+    const position = i * cellSize;
 
-        ctx.beginPath();
-        ctx.moveTo(position, 0);
-        ctx.lineTo(position, canvas.height);
-        ctx.moveTo(0, position);
-        ctx.lineTo(canvas.width, position);
-        ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(position, 0);
+    ctx.lineTo(position, canvas.height);
+    ctx.moveTo(0, position);
+    ctx.lineTo(canvas.width, position);
+    ctx.stroke();
+  }
+
+  // Яблоко.
+  const foodX = (food.x + 0.5) * cellSize;
+  const foodY = (food.y + 0.5) * cellSize;
+
+  ctx.save();
+  ctx.translate(foodX, foodY);
+  ctx.scale(cellSize, cellSize);
+
+  ctx.fillStyle = "rgba(242, 163, 126, 0.12)";
+  ctx.beginPath();
+  ctx.arc(0, 0, 0.46, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = "#f08069";
+  ctx.beginPath();
+  ctx.moveTo(0, -0.12);
+  ctx.bezierCurveTo(-0.12, -0.25, -0.39, -0.23, -0.39, 0.02);
+  ctx.bezierCurveTo(-0.39, 0.24, -0.20, 0.39, -0.06, 0.36);
+  ctx.bezierCurveTo(-0.02, 0.35, 0.02, 0.35, 0.06, 0.36);
+  ctx.bezierCurveTo(0.20, 0.39, 0.39, 0.24, 0.39, 0.02);
+  ctx.bezierCurveTo(0.39, -0.23, 0.12, -0.25, 0, -0.12);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.fillStyle = "rgba(255, 224, 190, 0.55)";
+  ctx.beginPath();
+  ctx.ellipse(-0.17, 0.02, 0.055, 0.12, -0.35, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.strokeStyle = "#76533a";
+  ctx.lineWidth = 0.045;
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.moveTo(0, -0.20);
+  ctx.quadraticCurveTo(0.02, -0.31, 0.08, -0.34);
+  ctx.stroke();
+
+  ctx.fillStyle = "#8bc878";
+  ctx.beginPath();
+  ctx.moveTo(0.025, -0.27);
+  ctx.quadraticCurveTo(0.16, -0.39, 0.22, -0.29);
+  ctx.quadraticCurveTo(0.15, -0.20, 0.025, -0.27);
+  ctx.fill();
+
+  ctx.restore();
+
+  // Плавная интерполяция головы между клетками.
+  const eased = progress * progress * (3 - 2 * progress);
+  const currentHead = snake[0];
+  const fromHead = previousHead || currentHead;
+  const movingHead = {
+    x: fromHead.x + (currentHead.x - fromHead.x) * eased,
+    y: fromHead.y + (currentHead.y - fromHead.y) * eased
+  };
+
+  const trail = [movingHead, ...headTrail.slice(1)].map(point => ({
+    x: (point.x + 0.5) * cellSize,
+    y: (point.y + 0.5) * cellSize
+  }));
+
+  function pointAtDistance(distance) {
+    if (distance <= 0 || trail.length === 1) {
+      return trail[0];
+    }
+
+    let travelled = 0;
+
+    for (let i = 0; i < trail.length - 1; i++) {
+      const start = trail[i];
+      const end = trail[i + 1];
+      const dx = end.x - start.x;
+      const dy = end.y - start.y;
+      const length = Math.hypot(dx, dy);
+
+      if (length === 0) continue;
+
+      if (travelled + length >= distance) {
+        const part = (distance - travelled) / length;
+        return {
+          x: start.x + dx * part,
+          y: start.y + dy * part
+        };
       }
 
-      // Яблоко с округлой формой, черенком и листиком.
-      const foodX = (food.x + 0.5) * cellSize;
-      const foodY = (food.y + 0.5) * cellSize;
+      travelled += length;
+    }
 
-      ctx.save();
-      ctx.translate(foodX, foodY);
-      ctx.scale(cellSize, cellSize);
+    return trail[trail.length - 1];
+  }
 
-      ctx.fillStyle = "rgba(242, 163, 126, 0.12)";
-      ctx.beginPath();
-      ctx.arc(0, 0, 0.46, 0, Math.PI * 2);
-      ctx.fill();
+  const points = snake.map((_, index) =>
+    pointAtDistance(index * cellSize)
+  );
 
-      ctx.fillStyle = "#f08069";
-      ctx.beginPath();
-      ctx.moveTo(0, -0.12);
-      ctx.bezierCurveTo(-0.12, -0.25, -0.39, -0.23, -0.39, 0.02);
-      ctx.bezierCurveTo(-0.39, 0.24, -0.20, 0.39, -0.06, 0.36);
-      ctx.bezierCurveTo(-0.02, 0.35, 0.02, 0.35, 0.06, 0.36);
-      ctx.bezierCurveTo(0.20, 0.39, 0.39, 0.24, 0.39, 0.02);
-      ctx.bezierCurveTo(0.39, -0.23, 0.12, -0.25, 0, -0.12);
-      ctx.closePath();
-      ctx.fill();
+  if (points.length === 0) return;
 
-      ctx.fillStyle = "rgba(255, 224, 190, 0.55)";
-      ctx.beginPath();
-      ctx.ellipse(-0.17, 0.02, 0.055, 0.12, -0.35, 0, Math.PI * 2);
-      ctx.fill();
+  // Сглаженная линия тела.
+  const bodyPath = new Path2D();
+  bodyPath.moveTo(points[0].x, points[0].y);
 
-      ctx.strokeStyle = "#76533a";
-      ctx.lineWidth = 0.045;
-      ctx.lineCap = "round";
-      ctx.beginPath();
-      ctx.moveTo(0, -0.20);
-      ctx.quadraticCurveTo(0.02, -0.31, 0.08, -0.34);
-      ctx.stroke();
+  for (let i = 1; i < points.length - 1; i++) {
+    const midpointX = (points[i].x + points[i + 1].x) / 2;
+    const midpointY = (points[i].y + points[i + 1].y) / 2;
 
-      ctx.fillStyle = "#8bc878";
-      ctx.beginPath();
-      ctx.moveTo(0.025, -0.27);
-      ctx.quadraticCurveTo(0.16, -0.39, 0.22, -0.29);
-      ctx.quadraticCurveTo(0.15, -0.20, 0.025, -0.27);
-      ctx.fill();
+    bodyPath.quadraticCurveTo(
+      points[i].x,
+      points[i].y,
+      midpointX,
+      midpointY
+    );
+  }
 
-      ctx.restore();
+  if (points.length > 1) {
+    const tail = points[points.length - 1];
+    bodyPath.lineTo(tail.x, tail.y);
+  }
 
-      // Интерполяция плавно перемещает все сегменты между клетками.
-     const eased = progress * progress * (3 - 2 * progress);
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
 
-const head = snake[0];
-const from = previousHead || head;
+  ctx.strokeStyle = "#4b9961";
+  ctx.lineWidth = cellSize * 0.88;
+  ctx.stroke(bodyPath);
 
-const movingHead = {
-  x: from.x + (head.x - from.x) * eased,
-  y: from.y + (head.y - from.y) * eased
-};
+  ctx.strokeStyle = "#72c888";
+  ctx.lineWidth = cellSize * 0.76;
+  ctx.stroke(bodyPath);
+
+  // Глаза змейки.
+  const headPoint = points[0];
+  const eyeOffset = cellSize * 0.15;
+  ctx.fillStyle = "#24543a";
+
+  if (direction.x !== 0) {
+    const eyeX = headPoint.x + direction.x * cellSize * 0.1;
+
+    ctx.beginPath();
+    ctx.arc(eyeX, headPoint.y - eyeOffset, 1.8, 0, Math.PI * 2);
+    ctx.arc(eyeX, headPoint.y + eyeOffset, 1.8, 0, Math.PI * 2);
+    ctx.fill();
+  } else {
+    const eyeY = headPoint.y + direction.y * cellSize * 0.1;
+
+    ctx.beginPath();
+    ctx.arc(headPoint.x - eyeOffset, eyeY, 1.8, 0, Math.PI * 2);
+    ctx.arc(headPoint.x + eyeOffset, eyeY, 1.8, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
 
 // След головы: от текущей плавной позиции назад по пройденным клеткам.
 const trail = [
