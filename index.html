@@ -341,6 +341,14 @@ const stepDuration = 125;
 let lastFrameTime = 0;
 let accumulator = 0;
 let rafId = null;
+    let baraMood = "idle"; // "idle" | "charge" | "angry"
+let chargeTimer = 0;
+
+function setBaraMood(mood, duration = 0) {
+  baraMood = mood;
+  chargeTimer = duration;
+}
+
 
     try {
       bestScore = Number(localStorage.getItem("snakeBestScore")) || 0;
@@ -499,119 +507,167 @@ function draw(progress = 1) {
     ctx.fill();
   }
 }
-    function drawBara() {
-      const c = baraCtx;
-      const w = baraCanvas.width;
-      const h = baraCanvas.height;
+   function drawBara(timestamp = 0) {
+  const c = baraCtx;
+  const w = baraCanvas.width;
+  const h = baraCanvas.height;
+  const t = timestamp * 0.001;
 
-      c.clearRect(0, 0, w, h);
+  c.clearRect(0, 0, w, h);
 
-      // Мягкое сияние за персонажем.
-      const glow = c.createRadialGradient(90, 105, 8, 90, 105, 88);
-      glow.addColorStop(0, "rgba(91, 183, 255, 0.32)");
-      glow.addColorStop(1, "rgba(30, 70, 120, 0)");
-      c.fillStyle = glow;
-      c.fillRect(0, 0, w, h);
+  let breathY = Math.sin(t * 2.8) * 3.5;
+  let headBobY = Math.sin(t * 2.8 - 0.5) * 2.5;
+  let shakeX = 0;
+  let glowColor = "rgba(91, 183, 255, 0.34)";
+  let eyeColor = "#ffcf69";
 
-      // Тело и плечи.
-      c.fillStyle = "#315b87";
+  if (baraMood === "charge") {
+    const jump = Math.abs(Math.sin(t * 16)) * 9;
+    breathY = -jump;
+    headBobY = -jump * 1.25;
+    shakeX = Math.sin(t * 45) * 2.2;
+    glowColor = "rgba(82, 214, 255, 0.58)";
+    eyeColor = "#ff6a2b";
+  } else if (baraMood === "angry") {
+    breathY = 5;
+    headBobY = 8;
+    glowColor = "rgba(240, 90, 80, 0.42)";
+    eyeColor = "#ff5e4d";
+  }
+
+  // Сияние
+  const glow = c.createRadialGradient(90, 105 + breathY, 8, 90, 105 + breathY, 92);
+  glow.addColorStop(0, glowColor);
+  glow.addColorStop(1, "rgba(30, 70, 120, 0)");
+  c.fillStyle = glow;
+  c.fillRect(0, 0, w, h);
+
+  // Линии скорости при разгоне
+  if (baraMood === "charge") {
+    c.strokeStyle = "rgba(145, 232, 255, 0.55)";
+    c.lineWidth = 2;
+    for (let i = 0; i < 4; i++) {
+      const y = 40 + i * 38;
+      const shift = ((t * 260 + i * 40) % 40) - 20;
       c.beginPath();
-      c.ellipse(90, 157, 48, 39, 0, 0, Math.PI * 2);
-      c.fill();
-
-      c.fillStyle = "#477aa7";
-      c.beginPath();
-      c.moveTo(48, 145);
-      c.quadraticCurveTo(43, 110, 60, 88);
-      c.lineTo(120, 88);
-      c.quadraticCurveTo(139, 111, 132, 145);
-      c.quadraticCurveTo(112, 162, 90, 160);
-      c.quadraticCurveTo(65, 162, 48, 145);
-      c.fill();
-
-      // Рога.
-      c.fillStyle = "#d1d7d0";
-      c.beginPath();
-      c.moveTo(61, 82);
-      c.quadraticCurveTo(38, 62, 28, 25);
-      c.quadraticCurveTo(62, 45, 76, 69);
-      c.closePath();
-      c.fill();
-
-      c.beginPath();
-      c.moveTo(119, 82);
-      c.quadraticCurveTo(142, 62, 152, 25);
-      c.quadraticCurveTo(118, 45, 104, 69);
-      c.closePath();
-      c.fill();
-
-      // Тёмная морда.
-      c.fillStyle = "#26384b";
-      c.beginPath();
-      c.moveTo(57, 79);
-      c.quadraticCurveTo(90, 56, 123, 79);
-      c.lineTo(116, 122);
-      c.quadraticCurveTo(108, 143, 90, 148);
-      c.quadraticCurveTo(72, 143, 64, 122);
-      c.closePath();
-      c.fill();
-
-      // Брови.
-      c.strokeStyle = "#b5d8ee";
-      c.lineWidth = 6;
-      c.lineCap = "round";
-      c.beginPath();
-      c.moveTo(63, 87);
-      c.lineTo(82, 94);
-      c.moveTo(117, 87);
-      c.lineTo(98, 94);
+      c.moveTo(15 + shift * 0.3, y);
+      c.lineTo(40 + shift * 0.3, y);
+      c.moveTo(165 - shift * 0.3, y + 12);
+      c.lineTo(140 - shift * 0.3, y + 12);
       c.stroke();
-
-      // Глаза.
-      c.fillStyle = "#ffcf69";
-      c.beginPath();
-      c.ellipse(75, 101, 7, 5, 0, 0, Math.PI * 2);
-      c.ellipse(105, 101, 7, 5, 0, 0, Math.PI * 2);
-      c.fill();
-
-      c.fillStyle = "#17242e";
-      c.beginPath();
-      c.arc(77, 101, 2.2, 0, Math.PI * 2);
-      c.arc(103, 101, 2.2, 0, Math.PI * 2);
-      c.fill();
-
-      // Нос и кольцо.
-      c.fillStyle = "#17242e";
-      c.beginPath();
-      c.moveTo(84, 111);
-      c.lineTo(96, 111);
-      c.lineTo(90, 119);
-      c.closePath();
-      c.fill();
-
-      c.strokeStyle = "#d7bd78";
-      c.lineWidth = 3;
-      c.beginPath();
-      c.arc(90, 123, 7, 0.1, Math.PI - 0.1);
-      c.stroke();
-
-      // Декоративный нагрудник.
-      c.fillStyle = "#b59656";
-      c.beginPath();
-      c.moveTo(75, 151);
-      c.lineTo(90, 166);
-      c.lineTo(105, 151);
-      c.lineTo(101, 180);
-      c.lineTo(90, 187);
-      c.lineTo(79, 180);
-      c.closePath();
-      c.fill();
-
-      c.fillStyle = "#e0c47c";
-      c.beginPath();
-      c.arc(90, 164, 5, 0, Math.PI * 2);
-      c.fill();
     }
+  }
+
+  // Тело
+  c.save();
+  c.translate(shakeX, breathY);
+
+  c.fillStyle = "#315b87";
+  c.beginPath();
+  c.ellipse(90, 157, 48, 39, 0, 0, Math.PI * 2);
+  c.fill();
+
+  c.fillStyle = "#477aa7";
+  c.beginPath();
+  c.moveTo(48, 145);
+  c.quadraticCurveTo(43, 110, 60, 88);
+  c.lineTo(120, 88);
+  c.quadraticCurveTo(139, 111, 132, 145);
+  c.quadraticCurveTo(112, 162, 90, 160);
+  c.quadraticCurveTo(65, 162, 48, 145);
+  c.fill();
+
+  c.fillStyle = "#b59656";
+  c.beginPath();
+  c.moveTo(75, 151);
+  c.lineTo(90, 166);
+  c.lineTo(105, 151);
+  c.lineTo(101, 180);
+  c.lineTo(90, 187);
+  c.lineTo(79, 180);
+  c.closePath();
+  c.fill();
+
+  c.fillStyle = baraMood === "charge" ? "#7ce8ff" : "#e0c47c";
+  c.beginPath();
+  c.arc(90, 164, 5, 0, Math.PI * 2);
+  c.fill();
+  c.restore();
+
+  // Голова
+  c.save();
+  c.translate(shakeX * 1.2, headBobY);
+
+  c.fillStyle = "#d1d7d0";
+  c.beginPath();
+  c.moveTo(61, 82);
+  c.quadraticCurveTo(38, 62, 28, 25);
+  c.quadraticCurveTo(62, 45, 76, 69);
+  c.closePath();
+  c.fill();
+
+  c.beginPath();
+  c.moveTo(119, 82);
+  c.quadraticCurveTo(142, 62, 152, 25);
+  c.quadraticCurveTo(118, 45, 104, 69);
+  c.closePath();
+  c.fill();
+
+  c.fillStyle = "#26384b";
+  c.beginPath();
+  c.moveTo(57, 79);
+  c.quadraticCurveTo(90, 56, 123, 79);
+  c.lineTo(116, 122);
+  c.quadraticCurveTo(108, 143, 90, 148);
+  c.quadraticCurveTo(72, 143, 64, 122);
+  c.closePath();
+  c.fill();
+
+  const browShift = baraMood === "angry" || baraMood === "charge" ? 3 : 0;
+  c.strokeStyle = "#b5d8ee";
+  c.lineWidth = 6;
+  c.lineCap = "round";
+  c.beginPath();
+  c.moveTo(63, 87 - browShift * 0.5);
+  c.lineTo(82, 94 + browShift);
+  c.moveTo(117, 87 - browShift * 0.5);
+  c.lineTo(98, 94 + browShift);
+  c.stroke();
+
+  c.fillStyle = eyeColor;
+  c.beginPath();
+  c.ellipse(75, 101, 7, 5, 0, 0, Math.PI * 2);
+  c.ellipse(105, 101, 7, 5, 0, 0, Math.PI * 2);
+  c.fill();
+
+  // Взгляд за змейкой
+  const head = snake.at(0) || { x: 10, y: 10 };
+  const lookX = ((head.x / (cells - 1)) - 0.5) * 4.5;
+  const lookY = ((head.y / (cells - 1)) - 0.5) * 3;
+
+  c.fillStyle = "#17242e";
+  c.beginPath();
+  c.arc(75 + lookX, 101 + lookY, 2.2, 0, Math.PI * 2);
+  c.arc(105 + lookX, 101 + lookY, 2.2, 0, Math.PI * 2);
+  c.fill();
+
+  c.fillStyle = "#17242e";
+  c.beginPath();
+  c.moveTo(84, 111);
+  c.lineTo(96, 111);
+  c.lineTo(90, 119);
+  c.closePath();
+  c.fill();
+
+  c.strokeStyle = "#d7bd78";
+  c.lineWidth = 3;
+  c.beginPath();
+  c.arc(90, 123, 7, 0.1, Math.PI - 0.1);
+  c.stroke();
+
+  c.restore();
+}
+
 
     function placeFood() {
       do {
@@ -623,6 +679,7 @@ function draw(progress = 1) {
     }
 
     function finishGame(text) {
+  setBaraMood("angry");
   if (rafId) cancelAnimationFrame(rafId);
   rafId = null;
   state = "over";
@@ -652,6 +709,7 @@ function update() {
       snake.unshift(head);
 
       if (ateFood) {
+        setBaraMood("charge", 800);
         prevSnake.push({ ...prevSnake.at(-1) });
         score += 1;
         scoreElement.textContent = score;
@@ -705,7 +763,7 @@ function update() {
       messageElement.textContent = "";
       startButton.textContent = "Начать заново";
       state = "playing";
-
+      setBaraMood("idle");
       placeFood();
       update();
 
@@ -733,9 +791,20 @@ function update() {
     });
 
     startButton.addEventListener("click", startGame);
-
     draw(1);
-    drawBara();
+
+function baraLoop(timestamp) {
+  if (chargeTimer > 0) {
+    chargeTimer -= 16.6;
+    if (chargeTimer <= 0 && state === "playing") {
+      setBaraMood("idle");
+    }
+  }
+  drawBara(timestamp);
+  requestAnimationFrame(baraLoop);
+}
+
+requestAnimationFrame(baraLoop);
   </script>
 </body>
 </html>
