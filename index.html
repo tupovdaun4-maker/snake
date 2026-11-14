@@ -588,10 +588,10 @@
       { x: 8, y: 10 }
     ];
 
-    previousSnake = snake.map(part => ({ ...part }));
-    direction = directions.KeyD;
-    nextDirection = directions.KeyD;
-    food = { x: 14, y: 10 };
+    previousSnake = snake.map((part, index) => {
+  const oldIndex = Math.min(index, oldSnake.length - 1);
+  return oldSnake[oldIndex] || part;
+});
 
     draw(1);
     requestAnimationFrame(gameLoop);
