@@ -360,8 +360,8 @@ function startAmbientMusic() {
   if (bgMusicTimer) clearInterval(bgMusicTimer);
 
   // Сразу играем первый мягкий аккорд из двух нот
-  playAmbientNote(chillNotes[0], 4.5, 0.05);
-  playAmbientNote(chillNotes[2], 4.5, 0.04);
+  playAmbientNote(261.63, 4.5, 0.05);
+playAmbientNote(329.63, 4.5, 0.04);
 
   // Каждые 2.2 секунды добавляем случайную гармоничную ноту
   bgMusicTimer = setInterval(() => {
