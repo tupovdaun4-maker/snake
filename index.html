@@ -395,13 +395,54 @@ function draw(progress = 1) {
   ctx.lineWidth = 1;
   for (let i = 1; i < cells; i++) {
     const position = i * cellSize;
-    ctx.beginPath();
-    ctx.moveTo(position, 0);
-    ctx.lineTo(position, canvas.height);
-    ctx.moveTo(0, position);
-    ctx.lineTo(canvas.width, position);
-    ctx.stroke();
+    const cornerRadius = cellSize * 0.45; // Радиус скругления углов (от 0.1 до 0.5)
+
+  ctx.beginPath();
+  ctx.moveTo(points.at(0).x, points.at(0).y);
+
+  for (let i = 1; i < points.length - 1; i++) {
+    const prev = points.at(i - 1);
+    const curr = points.at(i);
+    const next = points.at(i + 1);
+
+    const d1 = Math.hypot(curr.x - prev.x, curr.y - prev.y);
+    const d2 = Math.hypot(next.x - curr.x, next.y - curr.y);
+
+    // Если змейка в этом месте проходит сквозь стену, разрываем линию.
+    if (d1 > cellSize * 2 || d2 > cellSize * 2) {
+      ctx.lineTo(curr.x, curr.y);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(next.x, next.y);
+      continue;
+    }
+
+    // Вычисляем точки начала и конца скругления (не больше половины длины сегмента).
+    const r1 = Math.min(cornerRadius, d1 * 0.5);
+    const r2 = Math.min(cornerRadius, d2 * 0.5);
+
+    if (r1 > 0.1 && r2 > 0.1) {
+      const startX = curr.x - ((curr.x - prev.x) / d1) * r1;
+      const startY = curr.y - ((curr.y - prev.y) / d1) * r1;
+      const endX = curr.x + ((next.x - curr.x) / d2) * r2;
+      const endY = curr.y + ((next.y - curr.y) / d2) * r2;
+
+      ctx.lineTo(startX, startY);
+      ctx.quadraticCurveTo(curr.x, curr.y, endX, endY);
+    } else {
+      ctx.lineTo(curr.x, curr.y);
+    }
   }
+
+  // Доводим линию до самого кончика хвоста.
+  if (points.length > 1) {
+    const prev = points.at(-2);
+    const last = points.at(-1);
+    if (Math.hypot(last.x - prev.x, last.y - prev.y) <= cellSize * 2) {
+      ctx.lineTo(last.x, last.y);
+    }
+  }
+  ctx.stroke();
 
   // Яблоко.
   const appleX = (food.x + 0.5) * cellSize;
