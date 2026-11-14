@@ -412,7 +412,7 @@ function draw(progress = 1) {
   ctx.lineWidth = bodyWidth;
 
   ctx.beginPath();
-  ctx.moveTo(points.x, points.y);
+  ctx.moveTo(points.at(0).x, points.at(0).y);
 
   for (let i = 1; i < points.length; i++) {
     const p1 = points[i - 1];
@@ -428,7 +428,7 @@ function draw(progress = 1) {
   ctx.stroke();
 
   // Голова (цветовой акцент и глаза).
-  const head = points;
+  const head = points.at(0);
   ctx.fillStyle = "#a5e6b1";
   ctx.beginPath();
   ctx.arc(head.x, head.y, bodyWidth / 2, 0, Math.PI * 2);
@@ -587,9 +587,9 @@ function update() {
   direction = nextDirection;
 
   const head = {
-    x: (snake.x + direction.x + cells) % cells,
-    y: (snake.y + direction.y + cells) % cells
-  };
+  x: (snake.at(0).x + direction.x + cells) % cells,
+  y: (snake.at(0).y + direction.y + cells) % cells
+};
 
   const ateFood = head.x === food.x && head.y === food.y;
   const bodyToCheck = ateFood ? snake : snake.slice(0, -1);
