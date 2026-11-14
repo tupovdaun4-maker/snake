@@ -276,7 +276,8 @@
     };
 
     let snake;
-    let previousSnake;
+   let headTrail = [];
+let previousHead;
     let food;
     let direction;
     let nextDirection;
@@ -295,7 +296,8 @@
         { x: 8, y: 10 }
       ];
 
-      previousSnake = snake.map(part => ({ ...part }));
+      headTrail = snake.map(part => ({ ...part }));
+previousHead = { ...snake[0] };
       direction = directions.KeyD;
       nextDirection = directions.KeyD;
       score = 0;
@@ -341,6 +343,7 @@
 
     function update() {
       direction = nextDirection;
+      previousHead = { ...snake[0] };
 
       // Запоминаем положение каждой части до шага.
       const oldSnake = snake.map(part => ({ ...part }));
@@ -391,9 +394,9 @@
 
       // Каждая часть начинается со своей позиции до шага.
       // Это сохраняет плавное движение и тела, и хвоста.
-      previousSnake = snake.map((part, index) => {
-        const oldIndex = Math.min(index, oldSnake.length - 1);
-        return oldSnake[oldIndex] || part;
+      if (headTrail.length > snake.length + 2) {
+  headTrail.length = snake.length + 2;
+}
       });
     }
 
@@ -463,18 +466,102 @@
       ctx.restore();
 
       // Интерполяция плавно перемещает все сегменты между клетками.
-      const eased = progress * progress * (3 - 2 * progress);
+     const eased = progress * progress * (3 - 2 * progress);
 
-      const points = snake.map((part, index) => {
-        const from = previousSnake[index] || part;
-        const x = from.x + (part.x - from.x) * eased;
-        const y = from.y + (part.y - from.y) * eased;
+const head = snake[0];
+const from = previousHead || head;
 
-        return {
-          x: (x + 0.5) * cellSize,
-          y: (y + 0.5) * cellSize
-        };
-      });
+const movingHead = {
+  x: from.x + (head.x - from.x) * eased,
+  y: from.y + (head.y - from.y) * eased
+};
+
+// След головы: от текущей плавной позиции назад по пройденным клеткам.
+const trail = [
+  movingHead,
+  ...headTrail.slice(1)
+].map(point => ({
+  x: (point.x + 0.5) * cellSize,
+  y: (point.y + 0.5) * cellSize
+}));
+
+function pointAtDistance(distance) {
+  if (distance <= 0 || trail.length === 1) {
+    return trail[0];
+  }
+
+  let travelled = 0;
+
+  for (let i = 0; i < trail.length - 1; i++) {
+    const start = trail[i];
+    const end = trail[i + 1];
+    const dx = end.x - start.x;
+    const dy = end.y - start.y;
+    const length = Math.hypot(dx, dy);
+
+    if (length === 0) continue;
+
+    if (travelled + length >= distance) {
+      const part = (distance - travelled) / length;
+
+      return {
+        x: start.x + dx * part,
+        y: start.y + dy * part
+      };
+    }
+
+    travelled += length;
+  }
+
+  return trail[trail.length - 1];
+}
+
+// Каждая точка тела находится на постоянном расстоянии от предыдущей.
+const points = snake.map((_, index) => {
+  return pointAtDistance(index * cellSize);
+});
+
+if (points.length > 0) {
+  const bodyPath = new Path2D();
+  bodyPath.moveTo(points[0].x, points[0].y);
+
+  for (let i = 1; i < points.length; i++) {
+    bodyPath.lineTo(points[i].x, points[i].y);
+  }
+
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+
+  ctx.strokeStyle = "#4b9961";
+  ctx.lineWidth = cellSize * 0.88;
+  ctx.stroke(bodyPath);
+
+  ctx.strokeStyle = "#72c888";
+  ctx.lineWidth = cellSize * 0.76;
+  ctx.stroke(bodyPath);
+
+  // Глаза следуют за плавно движущейся головой.
+  const headPoint = points[0];
+  const eyeOffset = cellSize * 0.15;
+
+  ctx.fillStyle = "#24543a";
+
+  if (direction.x !== 0) {
+    const eyeX = headPoint.x + direction.x * cellSize * 0.1;
+
+    ctx.beginPath();
+    ctx.arc(eyeX, headPoint.y - eyeOffset, 1.8, 0, Math.PI * 2);
+    ctx.arc(eyeX, headPoint.y + eyeOffset, 1.8, 0, Math.PI * 2);
+    ctx.fill();
+  } else {
+    const eyeY = headPoint.y + direction.y * cellSize * 0.1;
+
+    ctx.beginPath();
+    ctx.arc(headPoint.x - eyeOffset, eyeY, 1.8, 0, Math.PI * 2);
+    ctx.arc(headPoint.x + eyeOffset, eyeY, 1.8, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
 
       if (points.length > 0) {
         const bodyPath = new Path2D();
@@ -577,7 +664,8 @@
       { x: 8, y: 10 }
     ];
 
-    previousSnake = snake.map(part => ({ ...part }));
+   headTrail = snake.map(part => ({ ...part }));
+previousHead = { ...snake[0] };
     direction = directions.KeyD;
     nextDirection = directions.KeyD;
     food = { x: 14, y: 10 };
