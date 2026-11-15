@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+м<!DOCTYPE html>
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
@@ -310,9 +310,99 @@ let bgMusicTimer = null;
 let isMuted = false;
 
 // Пентатоника (ля минор / до мажор) — все ноты гармонируют друг с другом
+// --- ГЕНЕРАТОР ФОНОВОЙ МЕЛОДИИ (Web Audio API) ---
+let audioCtx = null;
+let bgMusicTimer = null;
+let isMuted = false;
 
-    
+// Ноты (частоты в Гц)
+const N = {
+  C3: 130.81, E3: 164.81, F3: 174.61, G3: 196.00, A3: 220.00,
+  C4: 261.63, D4: 293.66, E4: 329.63, F4: 349.23, G4: 392.00, A4: 440.00, B4: 493.88,
+  C5: 523.25, D5: 587.33, E5: 659.25, G5: 783.99
+};
 
+// Партия основной мелодии (32 шага, 0 = пауза)
+const melodyTrack = [
+  N.E4, 0, N.G4, N.A4,   N.C5, 0, N.B4, N.G4,
+  N.A4, 0, N.E4, 0,      N.D4, 0, N.E4, 0,
+  N.F4, 0, N.A4, N.C5,   N.B4, 0, N.G4, N.E4,
+  N.D4, 0, N.E4, N.D4,   N.C4, 0, 0,    0
+];
+
+// Басовая партия (аккомпанемент под каждый такт)
+const bassTrack = [
+  N.C3, 0, 0, 0,  N.G3, 0, 0, 0,
+  N.A3, 0, 0, 0,  N.E3, 0, 0, 0,
+  N.F3, 0, 0, 0,  N.C3, 0, 0, 0,
+  N.G3, 0, 0, 0,  N.C3, 0, 0, 0
+];
+
+function initAudio() {
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  if (audioCtx.state === "suspended") {
+    audioCtx.resume();
+  }
+}
+
+// Универсальный синтезатор ноты (поддерживает разные формы волны)
+function playAmbientNote(freq, duration = 0.6, volume = 0.05, type = "triangle") {
+  if (!audioCtx || isMuted || !freq) return;
+
+  const now = audioCtx.currentTime;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+
+  osc.type = type; // "triangle" звучит мягко, как флейта или электропианино
+  osc.frequency.setValueAtTime(freq, now);
+
+  // Мягкая атака и плавное затухание (без щелчков)
+  gain.gain.setValueAtTime(0.0001, now);
+  gain.gain.linearRampToValueAtTime(volume, now + 0.04);
+  gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+
+  osc.start(now);
+  osc.stop(now + duration + 0.05);
+}
+
+// Запуск зацикленной мелодии
+function startAmbientMusic() {
+  initAudio();
+  if (bgMusicTimer) clearInterval(bgMusicTimer);
+
+  let step = 0;
+  const tempoMs = 320; // Скорость мелодии (меньше число = быстрее темп)
+
+  bgMusicTimer = setInterval(() => {
+    if (state !== "playing" || isMuted) return;
+
+    const leadNote = melodyTrack[step];
+    const bassNote = bassTrack[step];
+
+    if (leadNote) {
+      playAmbientNote(leadNote, 0.75, 0.055, "triangle");
+    }
+    if (bassNote) {
+      playAmbientNote(bassNote, 1.3, 0.06, "sine");
+    }
+
+    step = (step + 1) % melodyTrack.length;
+  }, tempoMs);
+}
+
+// Звук при поедании яблока (колокольчик)
+function playEatSound(isBonus = false) {
+  if (!audioCtx || isMuted) return;
+  playAmbientNote(isBonus ? 880 : 659.25, 0.5, 0.07, "sine");
+  if (isBonus) {
+    setTimeout(() => playAmbientNote(1046.5, 0.7, 0.07, "sine"), 110);
+  }
+}
 // Мягкий звук при поедании яблока (колокольчик)
 function playEatSound(isBonus = false) {
   if (!audioCtx || isMuted) return;
