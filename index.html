@@ -371,13 +371,7 @@
 
     <p class="message" id="message">Нажми кнопку или WASD, чтобы начать</p>
     <button class="start-button" id="startButton" type="button">Начать игру</button>
-        <div class="mobile-controls" aria-label="Сенсорное управление">
-      <button class="dir-btn dir-up" data-dir="KeyW" type="button">▲</button>
-      <button class="dir-btn dir-left" data-dir="KeyA" type="button">◀</button>
-      <button class="dir-btn dir-down" data-dir="KeyS" type="button">▼</button>
-      <button class="dir-btn dir-right" data-dir="KeyD" type="button">▶</button>
-    </div>
-
+        
     <div class="bottom-info">
       <span>Управление</span>
       <div class="keys">
@@ -558,6 +552,10 @@ function setBaraMood(mood, duration = 0) {
   chargeTimer = duration;
 }
 
+const scoreElement = document.getElementById("score");
+const bestScoreElement = document.getElementById("bestScore");
+const messageElement = document.getElementById("message");
+const startButton = document.getElementById("startButton");
 
     try {
       bestScore = Number(localStorage.getItem("snakeBestScore")) || 0;
@@ -1240,6 +1238,8 @@ function baraLoop(timestamp) {
   drawBara(timestamp);
   requestAnimationFrame(baraLoop);
 }
+startButton.addEventListener("click", startGame);
+draw(1);
 
 requestAnimationFrame(baraLoop);
   </script>
