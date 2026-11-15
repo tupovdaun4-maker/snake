@@ -610,87 +610,156 @@ function getVisualPoints(progress) {
 
 
 function draw(progress = 1) {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.fillStyle = "#183a2b";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  const time = performance.now() * 0.003;
+  ctx.clearRect(0, 0, boardLogicalSize, boardLogicalSize);
 
-  // 1. Сетка поля.
-  ctx.strokeStyle = "rgba(183, 226, 170, 0.07)";
-  ctx.lineWidth = 1;
-  for (let i = 1; i < cells; i++) {
-    const position = i * cellSize;
-    ctx.beginPath();
-    ctx.moveTo(position, 0);
-    ctx.lineTo(position, boardLogicalSize);
-    ctx.moveTo(0, position);
-    ctx.lineTo(boardLogicalSize, position);
-    ctx.stroke();
+  // 1. Шахматный лесной газон вместо однотонного фона
+  for (let row = 0; row < cells; row++) {
+    for (let col = 0; col < cells; col++) {
+      ctx.fillStyle = (row + col) % 2 === 0 ? "#193d2d" : "#153527";
+      ctx.fillRect(col * cellSize, row * cellSize, cellSize, cellSize);
+    }
   }
 
-  // 2. Яблоко.
+  // Лёгкая внутренняя тень по краям поля
+  const borderGrad = ctx.createRadialGradient(
+    boardLogicalSize / 2, boardLogicalSize / 2, boardLogicalSize * 0.35,
+    boardLogicalSize / 2, boardLogicalSize / 2, boardLogicalSize * 0.72
+  );
+  borderGrad.addColorStop(0, "rgba(0, 0, 0, 0)");
+  borderGrad.addColorStop(1, "rgba(6, 18, 13, 0.35)");
+  ctx.fillStyle = borderGrad;
+  ctx.fillRect(0, 0, boardLogicalSize, boardLogicalSize);
+
+  // 2. Яблоко с тенью, бликом и листиком
   const appleX = (food.x + 0.5) * cellSize;
   const appleY = (food.y + 0.5) * cellSize;
-  ctx.fillStyle = "#f08069";
+  const appleR = cellSize * 0.36;
+
+  // Тень под яблоком
+  ctx.fillStyle = "rgba(0, 0, 0, 0.25)";
   ctx.beginPath();
-  ctx.arc(appleX, appleY, cellSize * 0.34, 0, Math.PI * 2);
+  ctx.ellipse(appleX, appleY + appleR * 0.85, appleR * 0.8, appleR * 0.35, 0, 0, Math.PI * 2);
   ctx.fill();
 
-  ctx.strokeStyle = "#76533a";
+  // Плод с градиентом
+  const appleGrad = ctx.createRadialGradient(
+    appleX - appleR * 0.3, appleY - appleR * 0.3, appleR * 0.1,
+    appleX, appleY, appleR
+  );
+  appleGrad.addColorStop(0, "#ff9e8a");
+  appleGrad.addColorStop(0.6, "#ef6f56");
+  appleGrad.addColorStop(1, "#c44530");
+  ctx.fillStyle = appleGrad;
+  ctx.beginPath();
+  ctx.arc(appleX, appleY, appleR, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Блик
+  ctx.fillStyle = "rgba(255, 255, 255, 0.45)";
+  ctx.beginPath();
+  ctx.ellipse(appleX - appleR * 0.3, appleY - appleR * 0.3, appleR * 0.22, appleR * 0.12, -0.6, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Черенок и зелёный листик
+  ctx.strokeStyle = "#6e4b32";
   ctx.lineWidth = 2;
   ctx.lineCap = "round";
   ctx.beginPath();
-  ctx.moveTo(appleX, appleY - cellSize * 0.25);
-  ctx.lineTo(appleX + 2, appleY - cellSize * 0.43);
+  ctx.moveTo(appleX, appleY - cellSize * 0.26);
+  ctx.lineTo(appleX + 2, appleY - cellSize * 0.44);
   ctx.stroke();
-    // 2.1. Каменные препятствия
+
+  ctx.fillStyle = "#76d687";
+  ctx.beginPath();
+  ctx.ellipse(appleX + 4.5, appleY - cellSize * 0.37, 4, 2.2, 0.4, 0, Math.PI * 2);
+  ctx.fill();
+
+  // 2.1. Объёмные каменные препятствия
   for (const obs of obstacles) {
-    const ox = obs.x * cellSize + 2;
-    const oy = obs.y * cellSize + 2;
-    const size = cellSize - 4;
-    ctx.fillStyle = "#4b6258";
+    const ox = obs.x * cellSize + 1.5;
+    const oy = obs.y * cellSize + 1.5;
+    const size = cellSize - 3;
+
+    // Тень камня
+    ctx.fillStyle = "rgba(0, 0, 0, 0.28)";
     ctx.beginPath();
-    ctx.roundRect(ox, oy, size, size, 4);
+    ctx.roundRect(ox, oy + 2, size, size, 5);
     ctx.fill();
 
-    ctx.strokeStyle = "#7a998b";
-    ctx.lineWidth = 1.5;
+    // Основной градиент камня
+    const rockGrad = ctx.createLinearGradient(ox, oy, ox, oy + size);
+    rockGrad.addColorStop(0, "#637d71");
+    rockGrad.addColorStop(1, "#3b4f46");
+    ctx.fillStyle = rockGrad;
+    ctx.beginPath();
+    ctx.roundRect(ox, oy, size, size, 5);
+    ctx.fill();
+
+    // Верхняя светлая грань
+    ctx.strokeStyle = "rgba(185, 224, 206, 0.35)";
+    ctx.lineWidth = 1.2;
     ctx.stroke();
   }
 
-  // 2.2. Парные порталы (синий и фиолетовый вихри)
-  const portalColors = ["#4cc9f0", "#b5179e"];
+  // 2.2. Вращающиеся неоновые порталы
+  const portalColors = [
+    { core: "#4cc9f0", glow: "rgba(76, 201, 240, 0.35)" },
+    { core: "#d946ef", glow: "rgba(217, 70, 239, 0.35)" }
+  ];
   portals.forEach((p, idx) => {
     const px = (p.x + 0.5) * cellSize;
     const py = (p.y + 0.5) * cellSize;
-    ctx.strokeStyle = portalColors[idx];
-    ctx.lineWidth = 2.5;
-    ctx.beginPath();
-    ctx.arc(px, py, cellSize * 0.36, 0, Math.PI * 2);
-    ctx.stroke();
+    const r = cellSize * 0.38;
+    const style = portalColors[idx];
 
-    ctx.fillStyle = portalColors[idx] + "33"; // Полупрозрачный центр
+    // Свечение портала
+    const pGrad = ctx.createRadialGradient(px, py, 1, px, py, r * 1.2);
+    pGrad.addColorStop(0, style.core);
+    pGrad.addColorStop(0.5, style.glow);
+    pGrad.addColorStop(1, "rgba(0, 0, 0, 0)");
+    ctx.fillStyle = pGrad;
+    ctx.beginPath();
+    ctx.arc(px, py, r * 1.2, 0, Math.PI * 2);
     ctx.fill();
+
+    // Вращающееся кольцо вихря
+    ctx.save();
+    ctx.translate(px, py);
+    ctx.rotate(time * (idx === 0 ? 1.5 : -1.5));
+    ctx.strokeStyle = style.core;
+    ctx.lineWidth = 2.2;
+    ctx.setLineDash([6, 4]);
+    ctx.beginPath();
+    ctx.arc(0, 0, r * 0.85, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
   });
 
-  // 2.3. Золотое яблоко с кольцом-таймером
+  // 2.3. Пульсирующее золотое яблоко с кольцом-таймером
   if (bonusFood) {
     const bx = (bonusFood.x + 0.5) * cellSize;
     const by = (bonusFood.y + 0.5) * cellSize;
+    const pulse = 1 + Math.sin(time * 4) * 0.08;
     const remainingRatio = Math.max(0, (bonusFood.expiresAt - performance.now()) / bonusFood.duration);
 
-    // Кольцо времени вокруг плода
     ctx.strokeStyle = "#ffd166";
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 2.2;
     ctx.beginPath();
-    ctx.arc(bx, by, cellSize * 0.44, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * remainingRatio);
+    ctx.arc(bx, by, cellSize * 0.45, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * remainingRatio);
     ctx.stroke();
 
-    // Сам золотой плод
-    ctx.fillStyle = "#ffbe0b";
+    const goldGrad = ctx.createRadialGradient(bx - 2, by - 2, 1, bx, by, cellSize * 0.34 * pulse);
+    goldGrad.addColorStop(0, "#fff3b0");
+    goldGrad.addColorStop(0.5, "#ffbe0b");
+    goldGrad.addColorStop(1, "#d98200");
+
+    ctx.fillStyle = goldGrad;
     ctx.beginPath();
-    ctx.arc(bx, by, cellSize * 0.32, 0, Math.PI * 2);
+    ctx.arc(bx, by, cellSize * 0.34 * pulse, 0, Math.PI * 2);
     ctx.fill();
   }
+
    // 3. Цельная змейка со скруглёнными поворотами.
   const points = getVisualPoints(progress);
   if (points.length === 0) return;
