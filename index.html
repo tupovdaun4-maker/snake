@@ -488,13 +488,14 @@ function playEatSound(isBonus = false) {
     const baraCanvas = document.getElementById("baraCanvas");
     const baraCtx = baraCanvas.getContext("2d");
 
-    const scoreElement = document.getElementById("score");
-    const bestScoreElement = document.getElementById("bestScore");
-    const messageElement = document.getElementById("message");
-    const startButton = document.getElementById("startButton");
+    const boardLogicalSize = 420;
+    const dpr = Math.min(window.devicePixelRatio || 1, 3);
+    canvas.width = boardLogicalSize * dpr;
+    canvas.height = boardLogicalSize * dpr;
+    ctx.scale(dpr, dpr);
 
     const cells = 21;
-    const cellSize = canvas.width / cells;
+    const cellSize = boardLogicalSize / cells;
 
     const directions = {
       KeyW: { x: 0, y: -1 },
@@ -620,9 +621,9 @@ function draw(progress = 1) {
     const position = i * cellSize;
     ctx.beginPath();
     ctx.moveTo(position, 0);
-    ctx.lineTo(position, canvas.height);
+    ctx.lineTo(position, boardLogicalSize);
     ctx.moveTo(0, position);
-    ctx.lineTo(canvas.width, position);
+    ctx.lineTo(boardLogicalSize, position);
     ctx.stroke();
   }
 
