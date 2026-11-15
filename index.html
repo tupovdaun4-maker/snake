@@ -252,6 +252,51 @@
         flex-direction: column;
       }
     }
+        .mobile-controls {
+      display: none;
+      grid-template-columns: repeat(3, 56px);
+      grid-template-rows: repeat(2, 56px);
+      gap: 8px;
+      justify-content: center;
+      margin: 14px auto 4px;
+      touch-action: manipulation;
+    }
+
+    .dir-btn {
+      border: 1px solid rgba(165, 230, 177, 0.25);
+      border-radius: 16px;
+      background: rgba(16, 48, 35, 0.85);
+      color: var(--mint);
+      font-size: 22px;
+      font-weight: 700;
+      cursor: pointer;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .dir-btn:active {
+      background: rgba(131, 212, 147, 0.28);
+      transform: scale(0.95);
+    }
+
+    .dir-up { grid-column: 2; grid-row: 1; }
+    .dir-left { grid-column: 1; grid-row: 2; }
+    .dir-down { grid-column: 2; grid-row: 2; }
+    .dir-right { grid-column: 3; grid-row: 2; }
+
+    canvas {
+      touch-action: none; /* Отключает прокрутку страницы при свайпах по полю */
+    }
+
+    @media (max-width: 600px) {
+      .mobile-controls {
+        display: grid;
+      }
+      .bottom-info {
+        display: none;
+      }
+    }
+
   </style>
 </head>
 
@@ -291,6 +336,12 @@
 
     <p class="message" id="message">Нажми кнопку или WASD, чтобы начать</p>
     <button class="start-button" id="startButton" type="button">Начать игру</button>
+        <div class="mobile-controls" aria-label="Сенсорное управление">
+      <button class="dir-btn dir-up" data-dir="KeyW" type="button">▲</button>
+      <button class="dir-btn dir-left" data-dir="KeyA" type="button">◀</button>
+      <button class="dir-btn dir-down" data-dir="KeyS" type="button">▼</button>
+      <button class="dir-btn dir-right" data-dir="KeyD" type="button">▶</button>
+    </div>
 
     <div class="bottom-info">
       <span>Управление</span>
@@ -1014,10 +1065,9 @@ return true;
       rafId = requestAnimationFrame(gameLoop);
     }
 
-    document.addEventListener("keydown", event => {
-      const newDirection = directions[event.code];
+        function handleDirectionInput(code) {
+      const newDirection = directions[code];
       if (!newDirection) return;
-      event.preventDefault();
 
       if (state === "ready") {
         startGame();
@@ -1030,10 +1080,50 @@ return true;
       if (state === "playing" && !isOpposite) {
         nextDirection = newDirection;
       }
+    }
+
+    // Управление с клавиатуры
+    document.addEventListener("keydown", event => {
+      if (directions[event.code]) {
+        event.preventDefault();
+        handleDirectionInput(event.code);
+      }
     });
 
-    startButton.addEventListener("click", startGame);
-    draw(1);
+    // Управление экранными кнопками (pointerdown срабатывает мгновенно без задержки клика)
+    document.querySelectorAll(".dir-btn").forEach(btn => {
+      btn.addEventListener("pointerdown", event => {
+        event.preventDefault();
+        handleDirectionInput(btn.dataset.dir);
+      });
+    });
+
+    // Управление свайпами по игровому полю
+    let touchStartX = 0;
+    let touchStartY = 0;
+
+    canvas.addEventListener("touchstart", event => {
+      const touch = event.touches[0];
+      touchStartX = touch.clientX;
+      touchStartY = touch.clientY;
+    }, { passive: true });
+
+    canvas.addEventListener("touchend", event => {
+      if (!event.changedTouches.length) return;
+      const touch = event.changedTouches[0];
+      const dx = touch.clientX - touchStartX;
+      const dy = touch.clientY - touchStartY;
+
+      // Игнорируем случайные микро-касания меньше 20px
+      if (Math.abs(dx) < 20 && Math.abs(dy) < 20) return;
+
+      if (Math.abs(dx) > Math.abs(dy)) {
+        handleDirectionInput(dx > 0 ? "KeyD" : "KeyA");
+      } else {
+        handleDirectionInput(dy > 0 ? "KeyS" : "KeyW");
+      }
+    }, { passive: true });
+
 
 function baraLoop(timestamp) {
   if (chargeTimer > 0) {
