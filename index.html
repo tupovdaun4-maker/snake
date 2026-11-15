@@ -326,7 +326,15 @@
 
     <div class="play-area">
       <canvas id="board" width="420" height="420" aria-label="Игровое поле"></canvas>
-
+        .mobile-controls {
+      display: none;
+      grid-template-columns: repeat(3, 56px);
+      grid-template-rows: repeat(2, 56px);
+      gap: 8px;
+      justify-content: center;
+      margin: 14px auto 4px;
+      touch-action: manipulation;
+    }
       <aside class="character-card" aria-label="Персонаж Баратрум">
         <canvas id="baraCanvas" width="180" height="210"></canvas>
         <p class="character-name">Баратрум</p>
