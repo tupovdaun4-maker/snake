@@ -394,15 +394,6 @@ function startAmbientMusic() {
     step = (step + 1) % melodyTrack.length;
   }, tempoMs);
 }
-
-// Звук при поедании яблока (колокольчик)
-function playEatSound(isBonus = false) {
-  if (!audioCtx || isMuted) return;
-  playAmbientNote(isBonus ? 880 : 659.25, 0.5, 0.07, "sine");
-  if (isBonus) {
-    setTimeout(() => playAmbientNote(1046.5, 0.7, 0.07, "sine"), 110);
-  }
-}
 // Мягкий звук при поедании яблока (колокольчик)
 function playEatSound(isBonus = false) {
   if (!audioCtx || isMuted) return;
