@@ -348,15 +348,24 @@
       </div>
     </section>
 
-    <div class="play-area">
+       <div class="play-area">
       <canvas id="board" width="420" height="420" aria-label="Игровое поле"></canvas>
-        
+
+      <!-- ВОТ СЮДА ВСТАВЛЯЕМ КНОПКИ -->
+      <div class="mobile-controls" aria-label="Сенсорное управление">
+        <button class="dir-btn dir-up" data-dir="KeyW" type="button">▲</button>
+        <button class="dir-btn dir-left" data-dir="KeyA" type="button">◀</button>
+        <button class="dir-btn dir-down" data-dir="KeyS" type="button">▼</button>
+        <button class="dir-btn dir-right" data-dir="KeyD" type="button">▶</button>
+      </div>
+
       <aside class="character-card" aria-label="Персонаж Баратрум">
         <canvas id="baraCanvas" width="180" height="210"></canvas>
         <p class="character-name">Баратрум</p>
         <p class="character-caption">Дух из далёких миров</p>
       </aside>
     </div>
+
 
     <p class="message" id="message">Нажми кнопку или WASD, чтобы начать</p>
     <button class="start-button" id="startButton" type="button">Начать игру</button>
