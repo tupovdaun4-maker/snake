@@ -238,20 +238,44 @@
       }
     }
 
-    @media (max-width: 420px) {
-      h1 {
-        font-size: 26px;
+        @media (max-width: 600px) {
+      .game {
+        padding: 16px;
       }
 
-      .badge {
-        font-size: 10px;
+      .play-area {
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+
+      #board {
+        order: 1;
+      }
+
+      .mobile-controls {
+        display: grid;
+        order: 2;
+        margin: 4px auto;
+      }
+
+      .character-card {
+        order: 3;
+        min-height: auto;
+        padding: 10px 14px;
+        flex-direction: row;
+        gap: 14px;
+        text-align: left;
+      }
+
+      #baraCanvas {
+        max-width: 75px;
       }
 
       .bottom-info {
-        align-items: flex-start;
-        flex-direction: column;
+        display: none;
       }
     }
+
         .mobile-controls {
       display: none;
       grid-template-columns: repeat(3, 56px);
